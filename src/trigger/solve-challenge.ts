@@ -113,10 +113,10 @@ async function solveWithStreaming(
   stream: RealtimeDefinedStream<UIMessageChunk>,
   options?: { target?: "self" | "parent" | "root" | string },
 ): Promise<SolveResult> {
-  const startTime = Date.now();
   let executionCount = 0;
   let lastSuccessfulCode: string | undefined;
-  let timeToSolutionMs = 0;
+  let llmTimeMs = 0;
+  let llmStartTime = Date.now();
 
   const result = streamText({
     model: modelId,
@@ -134,12 +134,15 @@ async function solveWithStreaming(
             ),
         }),
         execute: async (input) => {
+          llmTimeMs += Date.now() - llmStartTime;
           executionCount++;
           logger.log("Running code attempt", { attempt: executionCount });
 
           const taskResult = await executeCodeTask.triggerAndWait({
             code: input.code,
           });
+
+          llmStartTime = Date.now();
 
           if (!taskResult.ok) {
             return {
@@ -150,9 +153,6 @@ async function solveWithStreaming(
 
           if (taskResult.output.success) {
             lastSuccessfulCode = input.code;
-            if (timeToSolutionMs === 0) {
-              timeToSolutionMs = Date.now() - startTime;
-            }
           }
 
           return taskResult.output;
@@ -178,9 +178,8 @@ async function solveWithStreaming(
     ? extractFunction(lastSuccessfulCode)
     : undefined;
 
-  if (!solution) {
-    timeToSolutionMs = Date.now() - startTime;
-  }
+  llmTimeMs += Date.now() - llmStartTime;
+  const timeToSolutionMs = llmTimeMs;
 
   logger.log("Solve completed", {
     success: solution !== undefined,
