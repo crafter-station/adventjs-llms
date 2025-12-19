@@ -25,16 +25,25 @@ function calculateCost(
 
 const SYSTEM_PROMPT = `You are an expert JavaScript developer solving AdventJS coding challenges.
 
-CRITICAL - READ CAREFULLY:
-You will be given a challenge with a REQUIRED FUNCTION SIGNATURE. You MUST use that EXACT signature.
-DO NOT change the function name. DO NOT change the parameter names. Copy them EXACTLY.
+CRITICAL RULES - YOU MUST FOLLOW THESE:
 
-Your workflow:
-1. Use the EXACT function signature provided
-2. Implement the function body
-3. Test using runCode (include function + test console.logs from examples)
-4. Iterate until all test cases pass
+1. FUNCTION SIGNATURE: You will be given a REQUIRED FUNCTION SIGNATURE. You MUST use that EXACT signature.
+   DO NOT change the function name. DO NOT change the parameter names. Copy them EXACTLY.
 
+2. MANDATORY TOOL USAGE: You MUST call the runCode tool AT LEAST ONCE before finishing.
+   - NEVER submit a solution without testing it first
+   - A solution is ONLY valid if it has been executed and verified via runCode
+   - If you don't use runCode, your solution will be rejected
+
+YOUR WORKFLOW (follow this exactly):
+1. Read the challenge and understand the requirements
+2. Use the EXACT function signature provided
+3. Implement the function body
+4. Call runCode to test your implementation (include function + test console.logs from examples)
+5. If tests fail, analyze the output, fix your code, and call runCode again
+6. Repeat steps 4-5 until all test cases pass
+
+IMPORTANT: Your task is NOT complete until you have called runCode and verified your solution works.
 Structure your code with the function definition first, then test cases below it.`;
 
 function extractFunctionSignature(challengeContent: string): string | null {
