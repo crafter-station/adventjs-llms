@@ -1,0 +1,58 @@
+{
+  "generatedAt": "2025-12-19T17:15:22.874Z",
+  "summary": {
+    "total": 6,
+    "passed": 0,
+    "warned": 1,
+    "failed": 5
+  },
+  "results": [
+    {
+      "modelId": "meta/llama-3.1-8b",
+      "displayName": "Llama 3.1 8B",
+      "success": true,
+      "toolCalled": false,
+      "durationMs": 1026
+    },
+    {
+      "modelId": "openai/gpt-5-pro",
+      "displayName": "GPT-5 pro",
+      "success": false,
+      "toolCalled": false,
+      "error": "Timeout",
+      "durationMs": 60004
+    },
+    {
+      "modelId": "xai/grok-2",
+      "displayName": "Grok 2",
+      "success": false,
+      "toolCalled": false,
+      "error": "Not Found",
+      "durationMs": 514
+    },
+    {
+      "modelId": "nvidia/nemotron-nano-12b-v2-vl",
+      "displayName": "Nvidia Nemotron Nano 12B V2 VL",
+      "success": false,
+      "toolCalled": false,
+      "error": "Method Not Allowed",
+      "durationMs": 610
+    },
+    {
+      "modelId": "meituan/longcat-flash-thinking",
+      "displayName": "LongCat Flash Thinking",
+      "success": false,
+      "toolCalled": false,
+      "error": "Not Found",
+      "durationMs": 512
+    },
+    {
+      "modelId": "mistral/mistral-nemo",
+      "displayName": "Mistral Nemo",
+      "success": false,
+      "toolCalled": false,
+      "error": "Bad Request",
+      "durationMs": 510
+    }
+  ]
+}
