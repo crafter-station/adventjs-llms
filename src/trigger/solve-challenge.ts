@@ -131,6 +131,7 @@ async function solveWithStreaming(
     model: modelId,
     system: SYSTEM_PROMPT,
     prompt: buildPrompt(challengeContent),
+    toolChoice: "required",
     tools: {
       runCode: tool({
         description:
