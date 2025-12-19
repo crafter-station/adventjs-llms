@@ -1,9 +1,9 @@
-import { logger, schemaTask } from "@trigger.dev/sdk";
+import { logger, retry, schemaTask } from "@trigger.dev/sdk";
 import { z } from "zod";
 
 export const executeCodeTask = schemaTask({
   id: "execute-code",
-  maxDuration: 60,
+  maxDuration: 90,
   schema: z.object({
     code: z.string().min(1).describe("The JavaScript code to execute"),
   }),
@@ -13,7 +13,7 @@ export const executeCodeTask = schemaTask({
     });
 
     try {
-      const response = await fetch(
+      const response = await retry.fetch(
         "https://api.uprizing.me/api/v1/run/javascript",
         {
           method: "POST",
@@ -21,6 +21,26 @@ export const executeCodeTask = schemaTask({
             "Content-Type": "application/json",
           },
           body: JSON.stringify({ code: payload.code }),
+          timeoutInMs: 15_000,
+          retry: {
+            timeout: {
+              maxAttempts: 3,
+              factor: 1.5,
+              minTimeoutInMs: 1_000,
+              maxTimeoutInMs: 10_000,
+              randomize: true,
+            },
+            byStatus: {
+              "500-599": {
+                strategy: "backoff",
+                maxAttempts: 3,
+                factor: 1.5,
+                minTimeoutInMs: 1_000,
+                maxTimeoutInMs: 10_000,
+                randomize: true,
+              },
+            },
+          },
         },
       );
 
