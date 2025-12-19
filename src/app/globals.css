@@ -1,26 +1,126 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* AdventJS Brand Colors */
+  --color-brand-green: #002226;
+  --color-brand-green-ghost: #2e4939;
+  --color-brand-green-light: #0c6f40;
+  --color-brand-green-light-2: #a2f176;
+  --color-brand-red: #a4303f;
+  --color-brand-red-dark: #841424;
+  --color-brand-beige: #e5e5e5;
+  --color-brand-yellow: #f8e71c;
+
+  /* Extended palette */
+  --color-red-400: #ff6568;
+  --color-red-500: #fb2c36;
+  --color-green-400: #05df72;
+  --color-green-500: #00c758;
+  --color-yellow-400: #fac800;
+  --color-gray-400: #99a1af;
+  --color-gray-500: #6a7282;
+
+  /* Semantic colors - Red theme */
+  --background: var(--color-brand-red-dark);
+  --foreground: var(--color-brand-beige);
+  --surface: var(--color-brand-red);
+  --surface-light: #b84455;
+  --border: rgba(255, 255, 255, 0.2);
+  --border-dark: #5a1a22;
+  --muted: rgba(229, 229, 229, 0.6);
+  --accent: var(--color-brand-green-light-2);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-surface: var(--surface);
+  --color-surface-light: var(--surface-light);
+  --color-border: var(--border);
+  --color-border-dark: var(--border-dark);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+
+  /* Brand colors */
+  --color-brand-green: var(--color-brand-green);
+  --color-brand-green-ghost: var(--color-brand-green-ghost);
+  --color-brand-green-light: var(--color-brand-green-light);
+  --color-brand-green-light-2: var(--color-brand-green-light-2);
+  --color-brand-red: var(--color-brand-red);
+  --color-brand-red-dark: var(--color-brand-red-dark);
+  --color-brand-beige: var(--color-brand-beige);
+  --color-brand-yellow: var(--color-brand-yellow);
+
+  /* Status colors */
+  --color-red-400: var(--color-red-400);
+  --color-red-500: var(--color-red-500);
+  --color-green-400: var(--color-green-400);
+  --color-green-500: var(--color-green-500);
+  --color-yellow-400: var(--color-yellow-400);
+  --color-gray-400: var(--color-gray-400);
+  --color-gray-500: var(--color-gray-500);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  border-color: var(--border);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-departure-mono), "Departure Mono", monospace;
+}
+
+::selection {
+  background: var(--color-brand-beige);
+  color: var(--color-brand-red-dark);
+}
+
+input,
+select,
+textarea,
+button {
+  border-radius: 0;
+}
+
+.pixel-shadow {
+  box-shadow:
+    inset 0 0 0 1px rgba(252, 252, 252, 0.2),
+    0 5px 0 0 rgba(11, 11, 11, 0.2),
+    0 4px 0 0 rgba(11, 11, 11, 0.2);
+}
+
+.mesh-gradient {
+  background-color: var(--color-brand-red-dark);
+  background-image:
+    radial-gradient(at 40% 20%, rgba(164, 48, 63, 0.4) 0px, transparent 50%),
+    radial-gradient(at 80% 0%, rgba(132, 20, 36, 0.3) 0px, transparent 50%),
+    radial-gradient(at 0% 50%, rgba(164, 48, 63, 0.4) 0px, transparent 50%),
+    radial-gradient(at 80% 50%, rgba(132, 20, 36, 0.2) 0px, transparent 50%),
+    radial-gradient(at 0% 100%, rgba(164, 48, 63, 0.3) 0px, transparent 50%),
+    radial-gradient(at 80% 100%, rgba(90, 26, 34, 0.4) 0px, transparent 50%);
+}
+
+.glow-gold {
+  box-shadow:
+    inset 0 0 0 1px rgba(252, 252, 252, 0.2),
+    0 5px 0 0 rgba(11, 11, 11, 0.2),
+    0 4px 0 0 rgba(11, 11, 11, 0.2),
+    0 0 20px 4px rgba(248, 231, 28, 0.6),
+    0 0 40px 8px rgba(248, 231, 28, 0.3);
+}
+
+.difficulty-easy {
+  background-color: var(--color-brand-green-light-2);
+  color: var(--color-brand-green-light);
+}
+
+.difficulty-medium {
+  background-color: var(--color-brand-yellow);
+  color: var(--color-brand-red-dark);
+}
+
+.difficulty-hard {
+  background-color: var(--color-red-500);
+  color: white;
 }
