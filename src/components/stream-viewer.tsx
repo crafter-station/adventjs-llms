@@ -33,29 +33,88 @@ interface ToolCall {
   status: "streaming" | "pending" | "executing" | "complete" | "error";
 }
 
+interface StreamElement {
+  type: "text" | "tool" | "unknown";
+  id: string;
+  content: string;
+  toolCall?: ToolCall;
+  rawChunk?: unknown;
+}
+
+const IGNORED_CHUNK_TYPES = new Set([
+  "start",
+  "start-step",
+  "finish-step",
+  "finish",
+]);
+
 function processChunks(chunks: UIMessageChunk[]): {
-  textParts: string[];
+  mainElements: StreamElement[];
+  reasoningText: string;
   toolCalls: Map<string, ToolCall>;
 } {
-  const textParts: string[] = [];
+  const mainElements: StreamElement[] = [];
   const toolCalls = new Map<string, ToolCall>();
+  const reasoningBlocks = new Map<string, string>();
   let currentText = "";
+  let currentTextStartIndex = -1;
 
-  for (const chunk of chunks) {
+  const flushText = () => {
+    if (currentText && currentTextStartIndex >= 0) {
+      const existingIndex = mainElements.findIndex(
+        (el) => el.type === "text" && el.id === `text-${currentTextStartIndex}`,
+      );
+      if (existingIndex >= 0) {
+        mainElements[existingIndex].content = currentText;
+      } else {
+        mainElements.push({
+          type: "text",
+          id: `text-${currentTextStartIndex}`,
+          content: currentText,
+        });
+      }
+      currentText = "";
+      currentTextStartIndex = -1;
+    }
+  };
+
+  for (let i = 0; i < chunks.length; i++) {
+    const chunk = chunks[i];
+
+    if (IGNORED_CHUNK_TYPES.has(chunk.type)) {
+      continue;
+    }
+
     switch (chunk.type) {
       case "text-delta":
+        if (currentTextStartIndex < 0) {
+          currentTextStartIndex = i;
+        }
         currentText += chunk.delta;
         break;
 
+      case "reasoning-start":
+        reasoningBlocks.set(chunk.id, "");
+        break;
+
+      case "reasoning-delta": {
+        const existing = reasoningBlocks.get(chunk.id) ?? "";
+        reasoningBlocks.set(chunk.id, existing + chunk.delta);
+        break;
+      }
+
       case "tool-input-start":
-        if (currentText) {
-          textParts.push(currentText);
-          currentText = "";
-        }
+        flushText();
         toolCalls.set(chunk.toolCallId, {
           id: chunk.toolCallId,
           name: chunk.toolName,
           status: "streaming",
+        });
+        mainElements.push({
+          type: "tool",
+          id: chunk.toolCallId,
+          content: "",
+          toolCall: toolCalls.get(chunk.toolCallId),
         });
         break;
 
@@ -69,20 +128,24 @@ function processChunks(chunks: UIMessageChunk[]): {
       }
 
       case "tool-input-available": {
-        if (currentText) {
-          textParts.push(currentText);
-          currentText = "";
-        }
+        flushText();
         const existing = toolCalls.get(chunk.toolCallId);
         if (existing) {
           existing.input = chunk.input;
           existing.status = "executing";
         } else {
-          toolCalls.set(chunk.toolCallId, {
+          const newTool: ToolCall = {
             id: chunk.toolCallId,
             name: chunk.toolName,
             input: chunk.input,
             status: "executing",
+          };
+          toolCalls.set(chunk.toolCallId, newTool);
+          mainElements.push({
+            type: "tool",
+            id: chunk.toolCallId,
+            content: "",
+            toolCall: newTool,
           });
         }
         break;
@@ -94,11 +157,18 @@ function processChunks(chunks: UIMessageChunk[]): {
           existing.output = chunk.output;
           existing.status = "complete";
         } else {
-          toolCalls.set(chunk.toolCallId, {
+          const newTool: ToolCall = {
             id: chunk.toolCallId,
             name: "runCode",
             output: chunk.output,
             status: "complete",
+          };
+          toolCalls.set(chunk.toolCallId, newTool);
+          mainElements.push({
+            type: "tool",
+            id: chunk.toolCallId,
+            content: "",
+            toolCall: newTool,
           });
         }
         break;
@@ -110,11 +180,18 @@ function processChunks(chunks: UIMessageChunk[]): {
           existing.error = chunk.errorText;
           existing.status = "error";
         } else {
-          toolCalls.set(chunk.toolCallId, {
+          const newTool: ToolCall = {
             id: chunk.toolCallId,
             name: "runCode",
             error: chunk.errorText,
             status: "error",
+          };
+          toolCalls.set(chunk.toolCallId, newTool);
+          mainElements.push({
+            type: "tool",
+            id: chunk.toolCallId,
+            content: "",
+            toolCall: newTool,
           });
         }
         break;
@@ -128,14 +205,25 @@ function processChunks(chunks: UIMessageChunk[]): {
         }
         break;
       }
+
+      default: {
+        flushText();
+        mainElements.push({
+          type: "unknown",
+          id: `unknown-${i}`,
+          content: JSON.stringify(chunk, null, 2),
+          rawChunk: chunk,
+        });
+        break;
+      }
     }
   }
 
-  if (currentText) {
-    textParts.push(currentText);
-  }
+  flushText();
 
-  return { textParts, toolCalls };
+  const reasoningText = Array.from(reasoningBlocks.values()).join("\n\n");
+
+  return { mainElements, reasoningText, toolCalls };
 }
 
 function ToolCallDisplay({ toolCall }: { toolCall: ToolCall }) {
@@ -247,6 +335,23 @@ function SolutionDisplay({ solution }: { solution: string }) {
   );
 }
 
+function UnknownChunkDisplay({ content }: { content: string }) {
+  return (
+    <div className="my-3 overflow-hidden border border-orange-400/30 bg-orange-400/5">
+      <div className="flex items-center gap-2 border-b border-orange-400/30 px-3 py-2">
+        <span className="text-xs font-bold uppercase text-orange-400">
+          Unknown Delta
+        </span>
+      </div>
+      <div className="p-3">
+        <pre className="max-h-32 overflow-auto whitespace-pre-wrap font-mono text-xs text-orange-300">
+          {content}
+        </pre>
+      </div>
+    </div>
+  );
+}
+
 export function StreamViewer({
   modelName,
   chunks,
@@ -255,43 +360,31 @@ export function StreamViewer({
   error,
   result,
 }: StreamViewerProps) {
-  const [showReasoning, setShowReasoning] = useState(true);
-  const { textParts, toolCalls } = processChunks(chunks);
+  const [showReasoning, setShowReasoning] = useState(false);
+  const { mainElements, reasoningText, toolCalls } = processChunks(chunks);
   const toolCallsArray = Array.from(toolCalls.values());
 
-  const renderReasoning = () => {
-    const elements: React.ReactNode[] = [];
-    let toolIndex = 0;
-
-    for (let i = 0; i < textParts.length; i++) {
-      elements.push(
-        <span key={`text-${i}`} className="whitespace-pre-wrap">
-          {textParts[i]}
-        </span>,
-      );
-
-      if (toolIndex < toolCallsArray.length) {
-        elements.push(
-          <ToolCallDisplay
-            key={`tool-${toolCallsArray[toolIndex].id}`}
-            toolCall={toolCallsArray[toolIndex]}
-          />,
-        );
-        toolIndex++;
+  const renderMainContent = () => {
+    return mainElements.map((element: StreamElement) => {
+      switch (element.type) {
+        case "text":
+          return (
+            <span key={element.id} className="whitespace-pre-wrap">
+              {element.content}
+            </span>
+          );
+        case "tool":
+          return element.toolCall ? (
+            <ToolCallDisplay key={element.id} toolCall={element.toolCall} />
+          ) : null;
+        case "unknown":
+          return (
+            <UnknownChunkDisplay key={element.id} content={element.content} />
+          );
+        default:
+          return null;
       }
-    }
-
-    while (toolIndex < toolCallsArray.length) {
-      elements.push(
-        <ToolCallDisplay
-          key={`tool-${toolCallsArray[toolIndex].id}`}
-          toolCall={toolCallsArray[toolIndex]}
-        />,
-      );
-      toolIndex++;
-    }
-
-    return elements;
+    });
   };
 
   const statusBadge = () => {
@@ -350,33 +443,44 @@ export function StreamViewer({
           <div className="space-y-4">
             {result?.solution && <SolutionDisplay solution={result.solution} />}
 
-            <div>
-              <button
-                type="button"
-                onClick={() => setShowReasoning(!showReasoning)}
-                className="mb-2 flex items-center gap-2 text-sm uppercase text-muted transition-colors hover:text-brand-beige"
-              >
-                <span
-                  className={`transform font-mono transition-transform ${showReasoning ? "rotate-90" : ""}`}
+            {reasoningText && (
+              <div>
+                <button
+                  type="button"
+                  onClick={() => setShowReasoning(!showReasoning)}
+                  className="mb-2 flex items-center gap-2 text-sm uppercase text-muted transition-colors hover:text-brand-beige"
                 >
-                  &gt;
-                </span>
-                {showReasoning ? "Hide" : "Show"} Reasoning
+                  <span
+                    className={`transform font-mono transition-transform ${showReasoning ? "rotate-90" : ""}`}
+                  >
+                    &gt;
+                  </span>
+                  {showReasoning ? "Hide" : "Show"} Reasoning
+                </button>
+
+                {showReasoning && (
+                  <div className="border border-purple-400/30 bg-purple-400/5 p-4">
+                    <pre className="max-h-48 overflow-auto whitespace-pre-wrap font-mono text-xs text-purple-300">
+                      {reasoningText}
+                    </pre>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="border border-white/20 bg-background p-4">
+              <div className="mb-2 text-xs font-bold uppercase text-muted">
+                Solving Process
                 {toolCallsArray.length > 0 && (
-                  <span className="text-xs">
+                  <span className="ml-2 font-normal">
                     ({toolCallsArray.length} tool call
                     {toolCallsArray.length !== 1 ? "s" : ""})
                   </span>
                 )}
-              </button>
-
-              {showReasoning && (
-                <div className="border border-white/20 bg-background p-4">
-                  <div className="font-mono text-sm text-muted">
-                    {renderReasoning()}
-                  </div>
-                </div>
-              )}
+              </div>
+              <div className="font-mono text-sm text-muted">
+                {renderMainContent()}
+              </div>
             </div>
           </div>
         )}

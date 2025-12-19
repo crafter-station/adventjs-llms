@@ -3476,45 +3476,6 @@ export const MODELS = [
     hasZdrProvider: true,
   },
   {
-    slug: "llama-4-maverick",
-    displayName: "Llama 4 Maverick 17B 128E Instruct",
-    creatorOrganization: "meta",
-    copyString: "meta/llama-4-maverick",
-    type: "chat",
-    tags: ["tool-use", "vision"],
-    providers: ["bedrock", "deepinfra", "vertex"],
-    isAggregated: true,
-    description:
-      "Llama 4 Maverick 17B-128E is Llama 4's largest and most capable model. It uses the Mixture-of-Experts (MoE) architecture and early fusion to provide coding, reasoning, and image capabilities.",
-    contextSize: 1310720,
-    maxOutputTokens: 8192,
-    inputCost: "0.15",
-    outputCost: "0.6",
-    playgroundUrl:
-      "https://ai-sdk.dev/playground/vertex:llama-4-maverick-17b-128e-instruct-maas",
-    websiteUrl: "https://cloud.google.com/vertex-ai/generative-ai/docs/models",
-    modelUrl:
-      "https://cloud.google.com/vertex-ai/generative-ai/docs/partner-models/llama/llama4-maverick",
-    pricingUrl: "https://cloud.google.com/vertex-ai/generative-ai/pricing",
-    isPreGateway: false,
-    hasZdrProvider: true,
-    metrics: {
-      model: "meta/llama-4-maverick",
-      modelType: "language",
-      provider: "bedrock",
-      throughput: {
-        averageTokensPerSecond: null,
-        p50TokensPerSecond: null,
-        p95TokensPerSecond: null,
-      },
-      latency: {
-        averageTimeToFirstTokenMs: null,
-        p50TimeToFirstTokenMs: null,
-        p95TimeToFirstTokenMs: null,
-      },
-    },
-  },
-  {
     slug: "embed-v4.0",
     displayName: "Embed v4.0",
     creatorOrganization: "cohere",
