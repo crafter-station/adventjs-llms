@@ -169,6 +169,7 @@ export function BattlesTable({
     { key: null, label: "Models", width: "" },
     { key: "status", label: "Status", width: "w-28" },
     { key: null, label: "Result", width: "w-36" },
+    { key: null, label: "Cost", width: "w-24", align: "right" },
     { key: "createdAt", label: "Date", width: "w-40" },
     { key: null, label: "", width: "w-16" },
   ];
@@ -248,6 +249,11 @@ export function BattlesTable({
                   modelASuccess={battle.modelASuccess}
                   modelBSuccess={battle.modelBSuccess}
                 />
+              </td>
+              <td className="px-4 py-3 text-right font-mono text-sm text-muted">
+                {battle.modelACost || battle.modelBCost
+                  ? `$${((battle.modelACost ?? 0) + (battle.modelBCost ?? 0)).toFixed(4)}`
+                  : "-"}
               </td>
               <td className="px-4 py-3 text-sm text-muted">
                 {formatDate(battle.createdAt)}

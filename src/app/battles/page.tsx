@@ -11,6 +11,54 @@ import { BattlesTable } from "./battles-table";
 
 const PAGE_SIZE = 30;
 
+type BattleStats = {
+  totalBattles: number;
+  completedBattles: number;
+  pendingBattles: number;
+  failedBattles: number;
+  totalCost: number;
+  totalExecutions: number;
+  totalInputTokens: number;
+  totalOutputTokens: number;
+};
+
+async function getBattleStats(): Promise<BattleStats> {
+  const allBattles = await db.select().from(battles);
+
+  let completedBattles = 0;
+  let pendingBattles = 0;
+  let failedBattles = 0;
+  let totalCost = 0;
+  let totalExecutions = 0;
+  let totalInputTokens = 0;
+  let totalOutputTokens = 0;
+
+  for (const battle of allBattles) {
+    if (battle.status === "completed") completedBattles++;
+    else if (battle.status === "pending") pendingBattles++;
+    else if (battle.status === "failed") failedBattles++;
+
+    totalCost += (battle.modelACost ?? 0) + (battle.modelBCost ?? 0);
+    totalExecutions +=
+      (battle.modelAExecutionCount ?? 0) + (battle.modelBExecutionCount ?? 0);
+    totalInputTokens +=
+      (battle.modelAInputTokens ?? 0) + (battle.modelBInputTokens ?? 0);
+    totalOutputTokens +=
+      (battle.modelAOutputTokens ?? 0) + (battle.modelBOutputTokens ?? 0);
+  }
+
+  return {
+    totalBattles: allBattles.length,
+    completedBattles,
+    pendingBattles,
+    failedBattles,
+    totalCost: Math.round(totalCost * 100) / 100,
+    totalExecutions,
+    totalInputTokens,
+    totalOutputTokens,
+  };
+}
+
 type SortField = "createdAt" | "challengeId" | "status";
 type SortOrder = "asc" | "desc";
 type Status = "pending" | "completed" | "failed";
@@ -137,12 +185,8 @@ export default async function BattlesPage({
 }: {
   searchParams: SearchParams;
 }) {
-  const {
-    battles: battlesList,
-    pagination,
-    sortField,
-    sortOrder,
-  } = await getBattles(searchParams);
+  const [{ battles: battlesList, pagination, sortField, sortOrder }, stats] =
+    await Promise.all([getBattles(searchParams), getBattleStats()]);
 
   return (
     <main className="flex-1 overflow-auto">
@@ -154,6 +198,73 @@ export default async function BattlesPage({
           <p className="mt-2 text-sm text-muted">
             View all past LLM battles. Click column headers to sort.
           </p>
+        </div>
+
+        <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8">
+          <div className="border border-white/20 bg-surface p-4 pixel-shadow">
+            <div className="text-2xl font-bold text-brand-beige">
+              {stats.totalBattles}
+            </div>
+            <div className="text-xs uppercase tracking-wider text-muted">
+              Total Battles
+            </div>
+          </div>
+          <div className="border border-white/20 bg-surface p-4 pixel-shadow">
+            <div className="text-2xl font-bold text-green-400">
+              {stats.completedBattles}
+            </div>
+            <div className="text-xs uppercase tracking-wider text-muted">
+              Completed
+            </div>
+          </div>
+          <div className="border border-white/20 bg-surface p-4 pixel-shadow">
+            <div className="text-2xl font-bold text-brand-yellow">
+              {stats.pendingBattles}
+            </div>
+            <div className="text-xs uppercase tracking-wider text-muted">
+              Pending
+            </div>
+          </div>
+          <div className="border border-white/20 bg-surface p-4 pixel-shadow">
+            <div className="text-2xl font-bold text-red-400">
+              {stats.failedBattles}
+            </div>
+            <div className="text-xs uppercase tracking-wider text-muted">
+              Failed
+            </div>
+          </div>
+          <div className="border border-white/20 bg-surface p-4 pixel-shadow">
+            <div className="text-2xl font-bold text-red-400">
+              ${stats.totalCost}
+            </div>
+            <div className="text-xs uppercase tracking-wider text-muted">
+              Total Cost
+            </div>
+          </div>
+          <div className="border border-white/20 bg-surface p-4 pixel-shadow">
+            <div className="text-2xl font-bold text-green-400">
+              {stats.totalExecutions.toLocaleString()}
+            </div>
+            <div className="text-xs uppercase tracking-wider text-muted">
+              Executions
+            </div>
+          </div>
+          <div className="border border-white/20 bg-surface p-4 pixel-shadow">
+            <div className="text-2xl font-bold text-brand-beige">
+              {stats.totalInputTokens.toLocaleString()}
+            </div>
+            <div className="text-xs uppercase tracking-wider text-muted">
+              Input Tokens
+            </div>
+          </div>
+          <div className="border border-white/20 bg-surface p-4 pixel-shadow">
+            <div className="text-2xl font-bold text-brand-beige">
+              {stats.totalOutputTokens.toLocaleString()}
+            </div>
+            <div className="text-xs uppercase tracking-wider text-muted">
+              Output Tokens
+            </div>
+          </div>
         </div>
 
         <Suspense fallback={<div className="h-12" />}>

@@ -185,42 +185,8 @@ async function getLeaderboard(): Promise<ModelStats[]> {
   return leaderboard;
 }
 
-export type GlobalStats = {
-  totalBattles: number;
-  totalExecutions: number;
-  totalModels: number;
-  totalCost: number;
-};
-
-async function getGlobalStats(): Promise<GlobalStats> {
-  const completedBattles = await db
-    .select()
-    .from(battles)
-    .where(eq(battles.status, "completed"));
-
-  const models = new Set<string>();
-  let totalExecutions = 0;
-  let totalCost = 0;
-
-  for (const battle of completedBattles) {
-    models.add(battle.modelA);
-    models.add(battle.modelB);
-    totalExecutions +=
-      (battle.modelAExecutionCount ?? 0) + (battle.modelBExecutionCount ?? 0);
-    totalCost += (battle.modelACost ?? 0) + (battle.modelBCost ?? 0);
-  }
-
-  return {
-    totalBattles: completedBattles.length,
-    totalExecutions,
-    totalModels: models.size,
-    totalCost: Math.round(totalCost * 100) / 100,
-  };
-}
-
 export default async function LeaderboardPage() {
   const leaderboard = await getLeaderboard();
-  const globalStats = await getGlobalStats();
 
   return (
     <main className="flex-1 overflow-auto">
@@ -243,49 +209,6 @@ export default async function LeaderboardPage() {
           </p>
         </div>
 
-        <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="border border-white/20 bg-surface p-4 pixel-shadow">
-            <div className="text-2xl font-bold text-brand-yellow">
-              {globalStats.totalBattles}
-            </div>
-            <div className="text-xs uppercase tracking-wider text-muted">
-              Battles Completed
-            </div>
-          </div>
-          <div className="border border-white/20 bg-surface p-4 pixel-shadow">
-            <div className="text-2xl font-bold text-green-400">
-              {globalStats.totalExecutions}
-            </div>
-            <div className="text-xs uppercase tracking-wider text-muted">
-              Code Executions via{" "}
-              <a
-                href="https://github.com/crafter-station/exec0"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-accent hover:underline"
-              >
-                exec0
-              </a>
-            </div>
-          </div>
-          <div className="border border-white/20 bg-surface p-4 pixel-shadow">
-            <div className="text-2xl font-bold text-brand-beige">
-              {globalStats.totalModels}
-            </div>
-            <div className="text-xs uppercase tracking-wider text-muted">
-              Models Tested
-            </div>
-          </div>
-          <div className="border border-white/20 bg-surface p-4 pixel-shadow">
-            <div className="text-2xl font-bold text-red-400">
-              ${globalStats.totalCost}
-            </div>
-            <div className="text-xs uppercase tracking-wider text-muted">
-              Total API Cost
-            </div>
-          </div>
-        </div>
-
         {leaderboard.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12">
             <div className="text-muted">No battles completed yet.</div>
@@ -297,7 +220,207 @@ export default async function LeaderboardPage() {
             </Link>
           </div>
         ) : (
-          <LeaderboardTable data={leaderboard} />
+          <>
+            {leaderboard.length >= 3 && (
+              <div className="mb-8">
+                <div className="grid gap-4 md:grid-cols-3">
+                  {/* 2nd Place */}
+                  <div className="order-2 md:order-1 flex flex-col">
+                    <div className="flex-1 border-2 border-brand-beige/40 bg-surface p-6 pixel-shadow transition-transform hover:scale-[1.02]">
+                      <div className="mb-4 flex items-center justify-between">
+                        <span className="text-4xl font-bold text-brand-beige">
+                          2
+                        </span>
+                        <span className="text-xs uppercase tracking-wider text-brand-beige">
+                          Silver
+                        </span>
+                      </div>
+                      <div className="mb-2 text-xl font-bold">
+                        {leaderboard[1].displayName}
+                      </div>
+                      <div className="mb-4 truncate font-mono text-xs text-muted">
+                        {leaderboard[1].model}
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <div className="text-2xl font-bold text-brand-beige">
+                            {leaderboard[1].winRate}%
+                          </div>
+                          <div className="text-xs uppercase text-muted">
+                            Win Rate
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-lg font-bold">
+                            <span className="text-green-400">
+                              {leaderboard[1].wins}
+                            </span>
+                            <span className="text-muted">/</span>
+                            <span className="text-red-400">
+                              {leaderboard[1].losses}
+                            </span>
+                            <span className="text-muted">/</span>
+                            <span>{leaderboard[1].draws}</span>
+                          </div>
+                          <div className="text-xs uppercase text-muted">
+                            W/L/D
+                          </div>
+                        </div>
+                        <div>
+                          <div className="font-mono text-lg font-bold">
+                            {leaderboard[1].avgTimeToSolution > 0
+                              ? `${(leaderboard[1].avgTimeToSolution / 1000).toFixed(1)}s`
+                              : "-"}
+                          </div>
+                          <div className="text-xs uppercase text-muted">
+                            Avg Time
+                          </div>
+                        </div>
+                        <div>
+                          <div className="font-mono text-lg font-bold">
+                            {leaderboard[1].totalBattles}
+                          </div>
+                          <div className="text-xs uppercase text-muted">
+                            Battles
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 1st Place */}
+                  <div className="order-1 md:order-2 flex flex-col">
+                    <div className="flex-1 border-2 border-brand-yellow bg-surface p-6 glow-gold transition-transform hover:scale-[1.02]">
+                      <div className="mb-4 flex items-center justify-between">
+                        <span className="text-5xl font-bold text-brand-yellow">
+                          1
+                        </span>
+                        <span className="text-xs uppercase tracking-wider text-brand-yellow">
+                          Champion
+                        </span>
+                      </div>
+                      <div className="mb-2 text-2xl font-bold">
+                        {leaderboard[0].displayName}
+                      </div>
+                      <div className="mb-4 truncate font-mono text-xs text-muted">
+                        {leaderboard[0].model}
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <div className="text-3xl font-bold text-brand-yellow">
+                            {leaderboard[0].winRate}%
+                          </div>
+                          <div className="text-xs uppercase text-muted">
+                            Win Rate
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-xl font-bold">
+                            <span className="text-green-400">
+                              {leaderboard[0].wins}
+                            </span>
+                            <span className="text-muted">/</span>
+                            <span className="text-red-400">
+                              {leaderboard[0].losses}
+                            </span>
+                            <span className="text-muted">/</span>
+                            <span>{leaderboard[0].draws}</span>
+                          </div>
+                          <div className="text-xs uppercase text-muted">
+                            W/L/D
+                          </div>
+                        </div>
+                        <div>
+                          <div className="font-mono text-xl font-bold">
+                            {leaderboard[0].avgTimeToSolution > 0
+                              ? `${(leaderboard[0].avgTimeToSolution / 1000).toFixed(1)}s`
+                              : "-"}
+                          </div>
+                          <div className="text-xs uppercase text-muted">
+                            Avg Time
+                          </div>
+                        </div>
+                        <div>
+                          <div className="font-mono text-xl font-bold">
+                            {leaderboard[0].totalBattles}
+                          </div>
+                          <div className="text-xs uppercase text-muted">
+                            Battles
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 3rd Place */}
+                  <div className="order-3 flex flex-col">
+                    <div className="flex-1 border-2 border-red-400/40 bg-surface p-6 pixel-shadow transition-transform hover:scale-[1.02]">
+                      <div className="mb-4 flex items-center justify-between">
+                        <span className="text-4xl font-bold text-red-400">
+                          3
+                        </span>
+                        <span className="text-xs uppercase tracking-wider text-red-400">
+                          Bronze
+                        </span>
+                      </div>
+                      <div className="mb-2 text-xl font-bold">
+                        {leaderboard[2].displayName}
+                      </div>
+                      <div className="mb-4 truncate font-mono text-xs text-muted">
+                        {leaderboard[2].model}
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <div className="text-2xl font-bold text-red-400">
+                            {leaderboard[2].winRate}%
+                          </div>
+                          <div className="text-xs uppercase text-muted">
+                            Win Rate
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-lg font-bold">
+                            <span className="text-green-400">
+                              {leaderboard[2].wins}
+                            </span>
+                            <span className="text-muted">/</span>
+                            <span className="text-red-400">
+                              {leaderboard[2].losses}
+                            </span>
+                            <span className="text-muted">/</span>
+                            <span>{leaderboard[2].draws}</span>
+                          </div>
+                          <div className="text-xs uppercase text-muted">
+                            W/L/D
+                          </div>
+                        </div>
+                        <div>
+                          <div className="font-mono text-lg font-bold">
+                            {leaderboard[2].avgTimeToSolution > 0
+                              ? `${(leaderboard[2].avgTimeToSolution / 1000).toFixed(1)}s`
+                              : "-"}
+                          </div>
+                          <div className="text-xs uppercase text-muted">
+                            Avg Time
+                          </div>
+                        </div>
+                        <div>
+                          <div className="font-mono text-lg font-bold">
+                            {leaderboard[2].totalBattles}
+                          </div>
+                          <div className="text-xs uppercase text-muted">
+                            Battles
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <LeaderboardTable data={leaderboard} />
+          </>
         )}
       </div>
     </main>
