@@ -2,7 +2,7 @@ import { db } from "../src/db";
 import { challenges } from "../src/db/schema";
 import { MODELS } from "../src/lib/models";
 
-const TOTAL_BATTLES = 1000;
+const TOTAL_BATTLES = Number(process.argv[2]) || 1000;
 const API_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
 const TOOL_USE_MODELS = MODELS.filter(
