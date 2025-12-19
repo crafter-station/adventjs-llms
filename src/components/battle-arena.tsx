@@ -159,7 +159,7 @@ export function BattleArena({ challenges }: BattleArenaProps) {
               Available Challenges
             </h2>
             <a
-              href="https://adventjs.dev/challenges/2025"
+              href="https://adventjs.dev"
               target="_blank"
               rel="noopener noreferrer"
               className="text-sm uppercase tracking-wider text-accent hover:underline"
