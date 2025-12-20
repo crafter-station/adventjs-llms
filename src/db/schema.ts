@@ -16,6 +16,7 @@ export const challenges = pgTable("challenges", {
   }).notNull(),
   description: text("description").notNull(),
   functionSignature: text("function_signature").notNull(),
+  testCases: text("test_cases").notNull().default(""),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

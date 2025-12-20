@@ -46,6 +46,9 @@ const IGNORED_CHUNK_TYPES = new Set([
   "start-step",
   "finish-step",
   "finish",
+  "text-start",
+  "text-end",
+  "reasoning-end",
 ]);
 
 function processChunks(chunks: UIMessageChunk[]): {
@@ -79,7 +82,17 @@ function processChunks(chunks: UIMessageChunk[]): {
   };
 
   for (let i = 0; i < chunks.length; i++) {
-    const chunk = chunks[i];
+    let chunk = chunks[i];
+
+    // Manual stream.append() calls stringify chunks for transport,
+    // so we need to parse them back into objects
+    if (typeof chunk === "string") {
+      try {
+        chunk = JSON.parse(chunk) as UIMessageChunk;
+      } catch {
+        // Not valid JSON, will be handled as unknown chunk
+      }
+    }
 
     if (IGNORED_CHUNK_TYPES.has(chunk.type)) {
       continue;

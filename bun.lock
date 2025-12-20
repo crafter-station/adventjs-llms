@@ -5,6 +5,7 @@
     "": {
       "name": "adventjs-llms",
       "dependencies": {
+        "@ai-sdk/anthropic": "^2.0.56",
         "@ai-sdk/openai": "^2.0.87",
         "@neondatabase/serverless": "^1.0.2",
         "@trigger.dev/react-hooks": "^4.3.0",
@@ -30,6 +31,8 @@
     },
   },
   "packages": {
+    "@ai-sdk/anthropic": ["@ai-sdk/anthropic@2.0.56", "", { "dependencies": { "@ai-sdk/provider": "2.0.0", "@ai-sdk/provider-utils": "3.0.19" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-XHJKu0Yvfu9SPzRfsAFESa+9T7f2YJY6TxykKMfRsAwpeWAiX/Gbx5J5uM15AzYC3Rw8tVP3oH+j7jEivENirQ=="],
+
     "@ai-sdk/gateway": ["@ai-sdk/gateway@2.0.21", "", { "dependencies": { "@ai-sdk/provider": "2.0.0", "@ai-sdk/provider-utils": "3.0.19", "@vercel/oidc": "3.0.5" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-BwV7DU/lAm3Xn6iyyvZdWgVxgLu3SNXzl5y57gMvkW4nGhAOV5269IrJzQwGt03bb107sa6H6uJwWxc77zXoGA=="],
 
     "@ai-sdk/openai": ["@ai-sdk/openai@2.0.87", "", { "dependencies": { "@ai-sdk/provider": "2.0.0", "@ai-sdk/provider-utils": "3.0.19" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-qywHMz8Kd+y/cluanX63SqFV/J8gLq596+W8K/MgdNroEnSabRIeikEP1/K0wwuKtSI7/KaLlVUnt1N5E3889Q=="],

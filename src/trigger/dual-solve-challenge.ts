@@ -26,7 +26,7 @@ export const dualSolveChallengeTask = schemaTask({
     challengeId: z
       .number()
       .min(1)
-      .max(16)
+      .max(25)
       .describe("The challenge number (1-16)"),
   }),
   run: async (payload, { ctx }) => {

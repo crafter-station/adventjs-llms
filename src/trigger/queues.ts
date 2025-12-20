@@ -14,3 +14,8 @@ export const executeCodeQueue = queue({
   name: "execute-code-queue",
   concurrencyLimit: 1,
 });
+
+export const validationQueue = queue({
+  name: "validation-queue",
+  concurrencyLimit: 2,
+});

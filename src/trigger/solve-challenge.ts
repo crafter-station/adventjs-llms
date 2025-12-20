@@ -1,6 +1,11 @@
 import type { RealtimeDefinedStream } from "@trigger.dev/core/v3";
 import { logger, schemaTask } from "@trigger.dev/sdk";
-import type { UIMessageChunk } from "ai";
+import type {
+  CoreAssistantMessage,
+  CoreMessage,
+  CoreToolMessage,
+  UIMessageChunk,
+} from "ai";
 import { streamText, tool } from "ai";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
@@ -9,6 +14,10 @@ import { challenges } from "@/db/schema";
 import { MODELS } from "@/lib/models";
 import { executeCodeTask } from "./execute-code";
 import { llmQueue } from "./queues";
+import { validateSolutionTask } from "./validate-solution";
+
+const MAX_RUN_CODE_EXECUTIONS = 10;
+const MAX_ITERATIONS = 20;
 
 function calculateCost(
   modelId: string,
@@ -26,26 +35,39 @@ function calculateCost(
 
 const SYSTEM_PROMPT = `You are an expert JavaScript developer solving AdventJS coding challenges.
 
-CRITICAL RULES - YOU MUST FOLLOW THESE:
+## AVAILABLE TOOLS
 
-1. FUNCTION SIGNATURE: You will be given a REQUIRED FUNCTION SIGNATURE. You MUST use that EXACT signature.
-   DO NOT change the function name. DO NOT change the parameter names. Copy them EXACTLY.
+You have exactly TWO tools:
 
-2. MANDATORY TOOL USAGE: You MUST call the runCode tool AT LEAST ONCE before finishing.
-   - NEVER submit a solution without testing it first
-   - A solution is ONLY valid if it has been executed and verified via runCode
-   - If you don't use runCode, your solution will be rejected
+1. **runCode** - Test your code (max 10 calls)
+   - Include function definition + test cases
+   - Use console.log() to see output
+   
+2. **submitSolution** - Submit your final answer (REQUIRED, call exactly once)
+   - Include ONLY the function definition
+   - Do NOT include test cases - official tests run automatically
+   - This is the ONLY way to complete the challenge
 
-YOUR WORKFLOW (follow this exactly):
-1. Read the challenge and understand the requirements
-2. Use the EXACT function signature provided
-3. Implement the function body
-4. Call runCode to test your implementation (include function + test console.logs from examples)
-5. If tests fail, analyze the output, fix your code, and call runCode again
-6. Repeat steps 4-5 until all test cases pass
+## RULES
 
-IMPORTANT: Your task is NOT complete until you have called runCode and verified your solution works.
-Structure your code with the function definition first, then test cases below it.`;
+- Use the EXACT function signature provided (same name, same parameters)
+- You MUST call submitSolution to finish - writing code in text/markdown does NOT count
+- Never output your solution as text - always use the submitSolution tool
+
+## WORKFLOW
+
+1. Read the challenge
+2. Implement using the exact function signature
+3. Test with runCode (include function + your test cases)
+4. Fix any issues
+5. **CALL submitSolution** with only the function definition
+
+## CRITICAL
+
+⚠️ THE CHALLENGE IS NOT COMPLETE UNTIL YOU CALL submitSolution ⚠️
+
+Do NOT just write code in your response. You MUST use the submitSolution tool.
+If you output code as text without calling submitSolution, you FAIL.`;
 
 function extractFunctionSignature(challengeContent: string): string | null {
   const signatureMatch = challengeContent.match(
@@ -118,87 +140,248 @@ export type SolveResult = {
   error?: string;
 };
 
+const runCodeSchema = z.object({
+  code: z
+    .string()
+    .describe(
+      "The complete JavaScript code to execute, including function definition and test console.logs",
+    ),
+});
+
+const submitSolutionSchema = z.object({
+  code: z
+    .string()
+    .describe(
+      "ONLY the function definition to submit as your solution. Do NOT include test cases - the system will run official tests.",
+    ),
+});
+
+type ExecuteCodeResult =
+  | { success: true; output: string }
+  | { success: false; error: string };
+
 async function solveWithStreaming(
   modelId: string,
   challengeContent: string,
+  testCases: string,
   stream: RealtimeDefinedStream<UIMessageChunk>,
   options?: { target?: "self" | "parent" | "root" | string },
 ): Promise<SolveResult> {
   let executionCount = 0;
-  let lastSuccessfulCode: string | undefined;
+  let totalInputTokens = 0;
+  let totalOutputTokens = 0;
   let llmTimeMs = 0;
-  let llmStartTime = Date.now();
 
-  const result = streamText({
-    model: modelId,
-    system: SYSTEM_PROMPT,
-    prompt: buildPrompt(challengeContent),
-    toolChoice: "required",
-    tools: {
-      runCode: tool({
-        description:
-          "Execute JavaScript code to test your solution. Include the function and test cases.",
-        inputSchema: z.object({
-          code: z
-            .string()
-            .describe(
-              "The complete JavaScript code to execute, including function definition and test console.logs",
-            ),
-        }),
-        execute: async (input) => {
-          llmTimeMs += Date.now() - llmStartTime;
-          executionCount++;
-          logger.log("Running code attempt", { attempt: executionCount });
-
-          const taskResult = await executeCodeTask.triggerAndWait({
-            code: input.code,
-          });
-
-          llmStartTime = Date.now();
-
-          if (!taskResult.ok) {
-            return {
-              success: false as const,
-              error: "Failed to execute code task",
-            };
-          }
-
-          if (taskResult.output.success) {
-            lastSuccessfulCode = input.code;
-          }
-
-          return taskResult.output;
-        },
-      }),
-    },
-  });
+  const messages: CoreMessage[] = [
+    { role: "user", content: buildPrompt(challengeContent) },
+  ];
 
   const pipeOptions = options?.target ? { target: options.target } : undefined;
-  const { waitUntilComplete } = stream.pipe(
-    result.toUIMessageStream(),
-    pipeOptions,
-  );
 
-  await waitUntilComplete();
+  let submittedSolution: string | undefined;
+  let submissionValidated = false;
+  let errorMessage: string | undefined;
 
-  const usage = await result.usage;
-  const inputTokens = usage.inputTokens ?? 0;
-  const outputTokens = usage.outputTokens ?? 0;
-  const cost = calculateCost(modelId, inputTokens, outputTokens);
+  const tools = {
+    runCode: tool({
+      description:
+        "Test your code before submitting. Include function + test cases with console.log(). Does NOT submit - you must call submitSolution separately.",
+      inputSchema: runCodeSchema,
+    }),
+    submitSolution: tool({
+      description:
+        "REQUIRED: Submit your final solution. Pass ONLY the function definition (no tests). You MUST call this to complete the challenge - outputting code as text does not count!",
+      inputSchema: submitSolutionSchema,
+      execute: async (input) => {
+        const submittedCode = input.code;
+        const submittedFunction = extractFunction(submittedCode);
+        submittedSolution = submittedFunction;
+        logger.log(
+          "Solution submitted, validating with official test cases...",
+        );
 
-  const solution = lastSuccessfulCode
-    ? extractFunction(lastSuccessfulCode)
-    : undefined;
+        const validationResult = await validateSolutionTask.triggerAndWait({
+          code: submittedFunction,
+          testCases,
+        });
 
-  llmTimeMs += Date.now() - llmStartTime;
+        if (validationResult.ok && validationResult.output.success) {
+          submissionValidated = true;
+          logger.log("Solution validated successfully");
+          return {
+            success: true as const,
+            output: validationResult.output.output,
+          };
+        }
+
+        submissionValidated = false;
+        const error = validationResult.ok
+          ? validationResult.output.error || "Validation failed"
+          : "Failed to execute validation";
+        errorMessage = error;
+        logger.error("Solution validation failed", { error });
+        return {
+          success: false as const,
+          error,
+        };
+      },
+    }),
+  };
+
+  for (let iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
+    if (executionCount >= MAX_RUN_CODE_EXECUTIONS && !submittedSolution) {
+      errorMessage = `Exceeded maximum of ${MAX_RUN_CODE_EXECUTIONS} runCode executions without submitting a solution`;
+      logger.error(errorMessage);
+      break;
+    }
+
+    const llmStartTime = Date.now();
+
+    const result = streamText({
+      model: modelId,
+      system: SYSTEM_PROMPT,
+      messages,
+      tools,
+    });
+
+    const { waitUntilComplete } = stream.pipe(
+      result.toUIMessageStream(),
+      pipeOptions,
+    );
+    await waitUntilComplete();
+
+    llmTimeMs += Date.now() - llmStartTime;
+
+    const [staticToolCalls, usage, text] = await Promise.all([
+      result.staticToolCalls,
+      result.usage,
+      result.text,
+    ]);
+
+    totalInputTokens += usage.inputTokens ?? 0;
+    totalOutputTokens += usage.outputTokens ?? 0;
+
+    if (!staticToolCalls || staticToolCalls.length === 0) {
+      if (text) {
+        messages.push({ role: "assistant", content: text });
+      }
+      logger.log("No tool calls, LLM finished without submitting", {
+        iteration,
+      });
+      errorMessage = "LLM finished without calling submitSolution";
+      break;
+    }
+
+    if (submittedSolution !== undefined) {
+      logger.log("submitSolution was called, exiting loop");
+      break;
+    }
+
+    const runCodeCalls = staticToolCalls.filter(
+      (tc) => tc.toolName === "runCode",
+    ) as Array<{
+      type: "tool-call";
+      toolName: "runCode";
+      toolCallId: string;
+      input: { code: string };
+    }>;
+
+    if (runCodeCalls.length === 0) {
+      logger.log("No actionable tool calls", { iteration });
+      continue;
+    }
+
+    const remainingExecutions = MAX_RUN_CODE_EXECUTIONS - executionCount;
+    const callsToExecute = runCodeCalls.slice(0, remainingExecutions);
+
+    if (callsToExecute.length < runCodeCalls.length) {
+      logger.log("Limiting runCode calls due to execution limit", {
+        requested: runCodeCalls.length,
+        executing: callsToExecute.length,
+        remaining: remainingExecutions,
+      });
+    }
+
+    logger.log("Batch executing runCode calls", {
+      count: callsToExecute.length,
+      iteration,
+    });
+
+    const batchResult = await executeCodeTask.batchTriggerAndWait(
+      callsToExecute.map((tc) => ({ payload: { code: tc.input.code } })),
+    );
+
+    executionCount += callsToExecute.length;
+
+    const toolResultsForMessage: ExecuteCodeResult[] = batchResult.runs.map(
+      (run) => {
+        if (run.ok) {
+          return run.output;
+        }
+        return { success: false as const, error: "Failed to execute code" };
+      },
+    );
+
+    for (let i = 0; i < callsToExecute.length; i++) {
+      const tc = callsToExecute[i];
+      const toolResult = toolResultsForMessage[i];
+      const chunk = JSON.stringify({
+        type: "tool-output-available",
+        toolCallId: tc.toolCallId,
+        output: toolResult,
+      }) as unknown as UIMessageChunk;
+      await stream.append(chunk, pipeOptions);
+    }
+
+    const assistantMessage: CoreAssistantMessage = {
+      role: "assistant",
+      content: [
+        ...(text ? [{ type: "text" as const, text }] : []),
+        ...callsToExecute.map((tc) => ({
+          type: "tool-call" as const,
+          toolCallId: tc.toolCallId,
+          toolName: tc.toolName,
+          input: tc.input,
+        })),
+      ],
+    };
+
+    const toolMessage: CoreToolMessage = {
+      role: "tool",
+      content: callsToExecute.map((tc, idx) => ({
+        type: "tool-result" as const,
+        toolCallId: tc.toolCallId,
+        toolName: tc.toolName,
+        output: {
+          type: "json" as const,
+          value: toolResultsForMessage[idx],
+        },
+      })),
+    };
+
+    messages.push(assistantMessage, toolMessage);
+
+    if (executionCount >= MAX_RUN_CODE_EXECUTIONS) {
+      messages.push({
+        role: "user",
+        content: `WARNING: You have used all ${MAX_RUN_CODE_EXECUTIONS} runCode executions. You MUST call submitSolution NOW with your best solution, or you will fail!`,
+      });
+    }
+  }
+
   const timeToSolutionMs = llmTimeMs;
+  const cost = calculateCost(modelId, totalInputTokens, totalOutputTokens);
+
+  const solution =
+    submittedSolution && submissionValidated ? submittedSolution : undefined;
 
   logger.log("Solve completed", {
     success: solution !== undefined,
+    submissionValidated,
     executionCount,
     timeToSolutionMs,
-    inputTokens,
-    outputTokens,
+    inputTokens: totalInputTokens,
+    outputTokens: totalOutputTokens,
     cost,
   });
 
@@ -206,11 +389,12 @@ async function solveWithStreaming(
     success: solution !== undefined,
     executionCount,
     timeToSolutionMs,
-    inputTokens,
-    outputTokens,
+    inputTokens: totalInputTokens,
+    outputTokens: totalOutputTokens,
     cost,
     solution,
     solutionLength: solution?.length,
+    error: errorMessage,
   };
 }
 
@@ -223,7 +407,7 @@ export const solveChallengeTask = schemaTask({
     challengeId: z
       .number()
       .min(1)
-      .max(16)
+      .max(25)
       .describe("The challenge number (1-16)"),
     streamId: z
       .enum(["model-a", "model-b"])
@@ -266,9 +450,13 @@ export const solveChallengeTask = schemaTask({
     const challengeContent = `${challenge.description}\n\n<!-- FUNCTION_SIGNATURE\n${challenge.functionSignature}\n-->`;
 
     try {
-      return await solveWithStreaming(modelId, challengeContent, stream, {
-        target: streamTarget,
-      });
+      return await solveWithStreaming(
+        modelId,
+        challengeContent,
+        challenge.testCases,
+        stream,
+        { target: streamTarget },
+      );
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
