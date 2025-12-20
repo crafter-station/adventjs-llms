@@ -185,7 +185,7 @@ export default async function LeaderboardPage() {
             </a>{" "}
             battle performance. Score (
             <a
-              href="https://github.com/crafter-station/adventjs-llms/blob/main/src/lib/scoring.ts"
+              href="https://github.com/crafter-station/advent0/blob/main/src/lib/scoring.ts"
               target="_blank"
               rel="noopener noreferrer"
               className="text-accent hover:underline"

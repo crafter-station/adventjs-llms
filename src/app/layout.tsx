@@ -10,9 +10,46 @@ const departureMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "AdventJS LLM Battle",
+  title: {
+    default: "advent0 - LLM Battle Arena",
+    template: "%s | advent0",
+  },
   description:
-    "Watch AI models compete head-to-head solving coding challenges from AdventJS 2025",
+    "Real-time AI coding battles. Watch models think, iterate, and debug live on AdventJS challenges. No static benchmarks.",
+  keywords: [
+    "LLM",
+    "AI",
+    "coding",
+    "benchmark",
+    "Claude",
+    "GPT",
+    "battle arena",
+    "AdventJS",
+    "JavaScript",
+    "code execution",
+  ],
+  authors: [{ name: "Crafter Station", url: "https://crafterstation.com" }],
+  creator: "Crafter Station",
+  metadataBase: new URL("https://advent0.crafter.run"),
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: "https://advent0.crafter.run",
+    siteName: "advent0",
+    title: "advent0 - LLM Battle Arena",
+    description:
+      "Real-time AI coding battles. Watch models think, iterate, and debug live.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "advent0 - LLM Battle Arena",
+    description:
+      "Real-time AI coding battles. Watch models think, iterate, and debug live.",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function RootLayout({

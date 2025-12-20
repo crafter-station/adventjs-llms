@@ -223,12 +223,25 @@ export default async function Home() {
         </div>
 
         <div className="relative z-10 mx-auto max-w-[1600px] px-4 py-8 sm:px-6 sm:py-16">
-          <div className="mb-6">
+          <div className="mb-6 flex flex-wrap items-center gap-3">
+            <a
+              href="https://crafterstation.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex h-10 items-center gap-2 border border-white/20 bg-brand-red px-4 transition-colors hover:bg-brand-red-dark"
+            >
+              <span className="text-xs uppercase tracking-widest text-brand-beige">
+                Built by{" "}
+                <span className="font-bold text-brand-yellow">
+                  Crafter Station
+                </span>
+              </span>
+            </a>
             <a
               href="https://github.com/crafter-station/exec0"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-3 border border-white/20 bg-brand-red px-4 py-2 transition-colors hover:bg-brand-red-dark"
+              className="inline-flex h-10 items-center gap-3 border border-white/20 bg-brand-red px-4 transition-colors hover:bg-brand-red-dark"
             >
               <span className="flex h-6 w-6 items-center justify-center bg-brand-beige text-xs font-bold text-brand-red-dark">
                 e0
@@ -241,14 +254,14 @@ export default async function Home() {
           </div>
 
           <h1 className="mb-4 text-3xl font-bold uppercase tracking-wider text-brand-beige md:text-5xl lg:text-6xl">
-            <span className="text-brand-yellow">AdventJS</span>
+            <span className="text-brand-yellow">advent0</span>
             <br />
             LLM Battle Arena
           </h1>
 
           <p className="mb-8 max-w-xl text-sm uppercase tracking-wider text-brand-beige/80">
-            Watch AI models compete head-to-head solving coding challenges.
-            Compare speed, token efficiency, and solution quality in real-time.
+            Real-time AI coding battles. No static benchmarks—watch models
+            think, iterate, and debug live on AdventJS challenges.
           </p>
 
           {stats.totalBattles > 0 && (
@@ -340,10 +353,10 @@ export default async function Home() {
           <div className="grid gap-8 md:grid-cols-2">
             <div>
               <h2 className="mb-4 text-xl font-bold uppercase tracking-wider text-brand-beige">
-                About This Project
+                About advent0
               </h2>
               <p className="text-sm uppercase leading-relaxed tracking-wider text-brand-beige/70">
-                LLM Battle Arena pits AI models against each other on{" "}
+                advent0 pits AI models against each other on{" "}
                 <a
                   href="https://adventjs.dev"
                   target="_blank"
@@ -361,6 +374,15 @@ export default async function Home() {
                 actual code execution. You can watch the models think, iterate,
                 and debug their solutions live.
               </p>
+              <a
+                href="https://crafterstation.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-4 inline-flex items-center gap-2 text-sm uppercase tracking-wider text-brand-yellow hover:underline"
+              >
+                A Crafter Station project
+                <span>↗</span>
+              </a>
             </div>
             <div className="border border-white/20 bg-brand-beige p-6 pixel-shadow">
               <div className="mb-4 flex items-center gap-3">

@@ -205,7 +205,7 @@ export default async function BattlesPage({
             Battle History
           </h1>
           <p className="mt-2 text-sm text-muted">
-            View all past LLM battles. Click column headers to sort.
+            Browse all advent0 battles. Click column headers to sort.
           </p>
         </div>
 
