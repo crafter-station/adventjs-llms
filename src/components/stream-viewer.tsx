@@ -488,7 +488,7 @@ export function StreamViewer({
 
       {result && (
         <div className="shrink-0 border-t border-white/20 bg-surface px-4 py-3">
-          <div className="grid grid-cols-4 gap-2 text-center text-xs">
+          <div className="grid grid-cols-2 gap-2 text-center text-xs sm:grid-cols-4">
             <div>
               <div className="font-mono text-sm font-bold text-brand-beige">
                 {result.timeToSolutionMs > 0

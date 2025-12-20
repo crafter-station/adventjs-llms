@@ -195,7 +195,7 @@ export default async function Home() {
           </div>
         </div>
 
-        <div className="relative z-10 mx-auto max-w-[1600px] px-6 py-16">
+        <div className="relative z-10 mx-auto max-w-[1600px] px-4 py-8 sm:px-6 sm:py-16">
           <div className="mb-6">
             <a
               href="https://github.com/crafter-station/exec0"
@@ -225,7 +225,7 @@ export default async function Home() {
           </p>
 
           {stats.totalBattles > 0 && (
-            <div className="flex flex-wrap gap-6">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-6">
               <div className="border border-white/20 bg-brand-red-dark/50 px-6 py-4 pixel-shadow">
                 <div className="text-3xl font-bold text-brand-beige">
                   {stats.totalBattles}
@@ -257,7 +257,7 @@ export default async function Home() {
 
       {topModels.length > 0 && (
         <section className="border-b border-white/20 bg-brand-red-dark">
-          <div className="mx-auto max-w-[1600px] px-6 py-8">
+          <div className="mx-auto max-w-[1600px] px-4 py-6 sm:px-6 sm:py-8">
             <div className="mb-6 flex items-center justify-between">
               <h2 className="text-sm font-bold uppercase tracking-widest text-brand-beige/60">
                 Top Performers
@@ -269,7 +269,7 @@ export default async function Home() {
                 View Full Ranking ↗
               </Link>
             </div>
-            <div className="grid gap-4 md:grid-cols-5">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5 md:gap-4">
               {topModels.map((model, i) => (
                 <div
                   key={model.model}
@@ -309,7 +309,7 @@ export default async function Home() {
       <BattleArena challenges={challengesList} />
 
       <section className="border-t border-white/20 bg-brand-red">
-        <div className="mx-auto max-w-[1600px] px-6 py-12">
+        <div className="mx-auto max-w-[1600px] px-4 py-8 sm:px-6 sm:py-12">
           <div className="grid gap-8 md:grid-cols-2">
             <div>
               <h2 className="mb-4 text-xl font-bold uppercase tracking-wider text-brand-beige">

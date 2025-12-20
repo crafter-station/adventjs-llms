@@ -190,7 +190,7 @@ export default async function LeaderboardPage() {
 
   return (
     <main className="flex-1 overflow-auto">
-      <div className="mx-auto max-w-[1600px] px-6 py-8">
+      <div className="mx-auto max-w-[1600px] px-4 py-6 sm:px-6 sm:py-8">
         <div className="mb-8">
           <h1 className="text-2xl font-bold uppercase tracking-wide">
             Leaderboard
@@ -225,7 +225,7 @@ export default async function LeaderboardPage() {
               <div className="mb-8">
                 <div className="grid gap-4 md:grid-cols-3">
                   {/* 2nd Place */}
-                  <div className="order-2 md:order-1 flex flex-col">
+                  <div className="order-1 flex flex-col md:order-1">
                     <div className="flex-1 border-2 border-brand-beige/40 bg-surface p-6 pixel-shadow transition-transform hover:scale-[1.02]">
                       <div className="mb-4 flex items-center justify-between">
                         <span className="text-4xl font-bold text-brand-beige">
@@ -289,7 +289,7 @@ export default async function LeaderboardPage() {
                   </div>
 
                   {/* 1st Place */}
-                  <div className="order-1 md:order-2 flex flex-col">
+                  <div className="order-first flex flex-col md:order-2">
                     <div className="flex-1 border-2 border-brand-yellow bg-surface p-6 glow-gold transition-transform hover:scale-[1.02]">
                       <div className="mb-4 flex items-center justify-between">
                         <span className="text-5xl font-bold text-brand-yellow">

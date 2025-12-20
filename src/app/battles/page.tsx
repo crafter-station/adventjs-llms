@@ -190,7 +190,7 @@ export default async function BattlesPage({
 
   return (
     <main className="flex-1 overflow-auto">
-      <div className="mx-auto max-w-[1600px] px-6 py-8">
+      <div className="mx-auto max-w-[1600px] px-4 py-6 sm:px-6 sm:py-8">
         <div className="mb-8">
           <h1 className="text-2xl font-bold uppercase tracking-wide">
             Battle History
@@ -200,7 +200,7 @@ export default async function BattlesPage({
           </p>
         </div>
 
-        <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8">
+        <div className="mb-8 grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4 xl:grid-cols-8">
           <div className="border border-white/20 bg-surface p-4 pixel-shadow">
             <div className="text-2xl font-bold text-brand-beige">
               {stats.totalBattles}

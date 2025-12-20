@@ -38,8 +38,8 @@ function BattleStreams({
   const error = streamAError || streamBError;
 
   return (
-    <div className="mx-auto flex h-full w-full max-w-6xl flex-col px-6 py-4">
-      <div className="grid min-h-0 flex-1 grid-cols-2 gap-4">
+    <div className="mx-auto flex h-full w-full max-w-6xl flex-col px-4 py-4 md:px-6">
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-2">
         <StreamViewer
           modelName={modelAName}
           chunks={modelAChunks ?? []}
