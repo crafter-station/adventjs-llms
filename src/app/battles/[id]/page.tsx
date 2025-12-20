@@ -56,8 +56,8 @@ export default async function BattleDetailPage({
   return (
     <div className="flex h-full flex-col overflow-hidden">
       <div className="shrink-0 border-b border-white/20 bg-surface">
-        <div className="mx-auto flex max-w-[1600px] items-center justify-between px-6 py-4">
-          <h1 className="text-xl font-bold uppercase tracking-wide">
+        <div className="mx-auto flex max-w-[1600px] items-center justify-between px-4 py-2 sm:px-6 sm:py-4">
+          <h1 className="text-sm font-bold uppercase tracking-wide sm:text-xl">
             {getModelDisplayName(battle.modelA)} vs{" "}
             {getModelDisplayName(battle.modelB)}
           </h1>
@@ -69,16 +69,18 @@ export default async function BattleDetailPage({
 
       {challenge && (
         <div className="shrink-0 border-b border-white/20">
-          <div className="mx-auto max-w-[1600px] px-6">
+          <div className="mx-auto max-w-[1600px] px-4 sm:px-6">
             <details className="group">
-              <summary className="flex cursor-pointer list-none items-center justify-between py-3 text-left transition-colors [&::-webkit-details-marker]:hidden">
-                <div className="flex items-center gap-4">
-                  <span className="font-mono text-sm font-bold text-brand-yellow">
+              <summary className="flex cursor-pointer list-none items-center justify-between py-2 text-left transition-colors sm:py-3 [&::-webkit-details-marker]:hidden">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-4">
+                  <span className="font-mono text-xs font-bold text-brand-yellow sm:text-sm">
                     #{String(challenge.id).padStart(2, "0")}
                   </span>
-                  <span className="font-bold">{challenge.title}</span>
+                  <span className="text-sm font-bold sm:text-base">
+                    {challenge.title}
+                  </span>
                   <span
-                    className={`px-1.5 py-0.5 text-xs font-bold uppercase ${
+                    className={`px-1.5 py-0.5 text-[10px] font-bold uppercase sm:text-xs ${
                       challenge.difficulty === "easy"
                         ? "difficulty-easy"
                         : challenge.difficulty === "medium"
@@ -92,7 +94,7 @@ export default async function BattleDetailPage({
                     href={`https://adventjs.dev/challenges/2025/${challenge.id}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-xs uppercase text-accent hover:underline"
+                    className="text-[10px] uppercase text-accent hover:underline sm:text-xs"
                   >
                     View on AdventJS
                   </a>

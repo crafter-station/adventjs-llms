@@ -41,13 +41,13 @@ function BattleStreams({
   const error = streamAError || streamBError;
 
   return (
-    <div className="mx-auto flex h-full w-full max-w-6xl flex-col px-4 py-4 md:px-6">
+    <div className="mx-auto flex h-full w-full max-w-6xl flex-col px-2 py-2 sm:px-4 sm:py-4 md:px-6">
       {/* Mobile tabs */}
-      <div className="mb-4 flex gap-2 lg:hidden">
+      <div className="mb-2 flex gap-1 lg:hidden">
         <button
           type="button"
           onClick={() => setActiveTab("a")}
-          className={`flex-1 border px-4 py-2 text-sm font-bold uppercase transition-colors ${
+          className={`flex-1 truncate border px-2 py-1.5 text-xs font-bold uppercase transition-colors ${
             activeTab === "a"
               ? "border-brand-beige bg-brand-beige text-brand-red-dark"
               : "border-white/20 bg-surface text-brand-beige hover:bg-surface-light"
@@ -55,13 +55,13 @@ function BattleStreams({
         >
           {modelAName}
           {output?.modelA?.success && (
-            <span className="ml-2 text-xs text-green-600">✓</span>
+            <span className="ml-1 text-green-600">✓</span>
           )}
         </button>
         <button
           type="button"
           onClick={() => setActiveTab("b")}
-          className={`flex-1 border px-4 py-2 text-sm font-bold uppercase transition-colors ${
+          className={`flex-1 truncate border px-2 py-1.5 text-xs font-bold uppercase transition-colors ${
             activeTab === "b"
               ? "border-brand-beige bg-brand-beige text-brand-red-dark"
               : "border-white/20 bg-surface text-brand-beige hover:bg-surface-light"
@@ -69,7 +69,7 @@ function BattleStreams({
         >
           {modelBName}
           {output?.modelB?.success && (
-            <span className="ml-2 text-xs text-green-600">✓</span>
+            <span className="ml-1 text-green-600">✓</span>
           )}
         </button>
       </div>

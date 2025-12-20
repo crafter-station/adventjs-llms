@@ -426,12 +426,14 @@ export function StreamViewer({
 
   return (
     <div className="flex h-full flex-col overflow-hidden border border-white/20 bg-surface pixel-shadow">
-      <div className="flex shrink-0 items-center justify-between border-b border-white/20 bg-surface px-4 py-3">
-        <h3 className="font-bold uppercase">{modelName}</h3>
+      <div className="flex shrink-0 items-center justify-between border-b border-white/20 bg-surface px-3 py-2 sm:px-4 sm:py-3">
+        <h3 className="truncate text-sm font-bold uppercase sm:text-base">
+          {modelName}
+        </h3>
         {statusBadge()}
       </div>
 
-      <div className="min-h-0 flex-1 overflow-auto p-4">
+      <div className="min-h-0 flex-1 overflow-auto p-2 sm:p-4">
         {error ? (
           <div className="text-red-400">Error: {error.message}</div>
         ) : chunks.length === 0 ? (
@@ -487,8 +489,8 @@ export function StreamViewer({
       </div>
 
       {result && (
-        <div className="shrink-0 border-t border-white/20 bg-surface px-4 py-3">
-          <div className="grid grid-cols-2 gap-2 text-center text-xs sm:grid-cols-4">
+        <div className="shrink-0 border-t border-white/20 bg-surface px-2 py-2 sm:px-4 sm:py-3">
+          <div className="grid grid-cols-2 gap-1 text-center text-[10px] sm:grid-cols-4 sm:gap-2 sm:text-xs">
             <div>
               <div className="font-mono text-sm font-bold text-brand-beige">
                 {result.timeToSolutionMs > 0
