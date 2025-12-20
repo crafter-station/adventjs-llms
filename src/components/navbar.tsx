@@ -81,6 +81,15 @@ export function Navbar() {
             <span className="text-lg leading-none">↗</span>
           </a>
           <a
+            href="https://github.com/crafter-station/adventjs-llms"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex h-full items-center gap-2 border-l border-white/20 px-6 text-sm uppercase tracking-wider text-brand-beige transition-colors hover:bg-brand-red"
+          >
+            View Source
+            <span className="text-lg leading-none">↗</span>
+          </a>
+          <a
             href="https://github.com/crafter-station/exec0"
             target="_blank"
             rel="noopener noreferrer"
@@ -124,6 +133,15 @@ export function Navbar() {
             className="flex items-center gap-2 border-b border-white/10 px-6 py-3 text-sm uppercase tracking-wider text-brand-beige transition-colors hover:bg-brand-red"
           >
             AdventJS
+            <span className="text-lg leading-none">↗</span>
+          </a>
+          <a
+            href="https://github.com/crafter-station/adventjs-llms"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 border-b border-white/10 px-6 py-3 text-sm uppercase tracking-wider text-brand-beige transition-colors hover:bg-brand-red"
+          >
+            View Source
             <span className="text-lg leading-none">↗</span>
           </a>
           <a

@@ -6,8 +6,18 @@ import { useCallback } from "react";
 
 import type { Battle } from "@/db/schema";
 import { MODELS } from "@/lib/models";
+import {
+  type BattleMetrics,
+  calculateBattleScore,
+  type Difficulty,
+} from "@/lib/scoring";
 
-type SortField = "createdAt" | "challengeId" | "status";
+type SortField =
+  | "createdAt"
+  | "challengeId"
+  | "scoreA"
+  | "scoreB"
+  | "totalCost";
 type SortOrder = "asc" | "desc";
 
 function getModelDisplayName(modelId: string): string {
@@ -22,57 +32,6 @@ function formatDate(date: Date): string {
     hour: "2-digit",
     minute: "2-digit",
   });
-}
-
-function BattleStatusBadge({ status }: { status: string }) {
-  const styles = {
-    pending: "bg-brand-yellow/20 text-brand-yellow",
-    completed: "bg-green-400/20 text-green-400",
-    failed: "bg-red-400/20 text-red-400",
-  };
-
-  return (
-    <span
-      className={`px-2 py-0.5 text-xs font-bold uppercase ${styles[status as keyof typeof styles] || styles.pending}`}
-    >
-      {status}
-    </span>
-  );
-}
-
-function BattleResultBadge({
-  modelASuccess,
-  modelBSuccess,
-}: {
-  modelASuccess: boolean | null;
-  modelBSuccess: boolean | null;
-}) {
-  if (modelASuccess === null || modelBSuccess === null) {
-    return <span className="text-xs text-muted">-</span>;
-  }
-
-  if (modelASuccess && modelBSuccess) {
-    return (
-      <span className="text-xs font-bold uppercase text-brand-beige">
-        Draw (both solved)
-      </span>
-    );
-  }
-  if (!modelASuccess && !modelBSuccess) {
-    return (
-      <span className="text-xs font-bold uppercase text-muted">
-        Draw (both failed)
-      </span>
-    );
-  }
-  if (modelASuccess) {
-    return (
-      <span className="text-xs font-bold uppercase text-green-400">A wins</span>
-    );
-  }
-  return (
-    <span className="text-xs font-bold uppercase text-green-400">B wins</span>
-  );
 }
 
 function SortIcon({
@@ -121,20 +80,55 @@ function SortIcon({
   );
 }
 
+function getScoreColor(score: number): string {
+  if (score >= 90) return "text-green-400";
+  if (score >= 70) return "text-brand-yellow";
+  if (score >= 50) return "text-brand-beige";
+  if (score > 0) return "text-red-400";
+  return "text-muted";
+}
+
+function calculateScore(
+  battle: Battle,
+  model: "A" | "B",
+  difficulty: Difficulty,
+): number {
+  const metrics: BattleMetrics = {
+    success:
+      model === "A"
+        ? (battle.modelASuccess ?? false)
+        : (battle.modelBSuccess ?? false),
+    timeToSolutionMs:
+      model === "A" ? battle.modelATimeToSolution : battle.modelBTimeToSolution,
+    executionCount:
+      model === "A" ? battle.modelAExecutionCount : battle.modelBExecutionCount,
+    outputTokens:
+      model === "A" ? battle.modelAOutputTokens : battle.modelBOutputTokens,
+    solutionLength:
+      model === "A" ? battle.modelASolutionLength : battle.modelBSolutionLength,
+    cost: model === "A" ? battle.modelACost : battle.modelBCost,
+  };
+  return calculateBattleScore(metrics, difficulty);
+}
+
 const SORT_DEFAULTS: Record<SortField, SortOrder> = {
   createdAt: "desc",
   challengeId: "asc",
-  status: "asc",
+  scoreA: "desc",
+  scoreB: "desc",
+  totalCost: "asc",
 };
 
 type BattlesTableProps = {
   battles: Battle[];
+  challengeMap: Record<number, { difficulty: string }>;
   sortField: SortField;
   sortOrder: SortOrder;
 };
 
 export function BattlesTable({
   battles,
+  challengeMap,
   sortField,
   sortOrder,
 }: BattlesTableProps) {
@@ -165,20 +159,62 @@ export function BattlesTable({
     width: string;
     align?: "left" | "right" | "center";
   }[] = [
-    { key: "challengeId", label: "#", width: "w-16" },
+    { key: "challengeId", label: "Challenge", width: "w-28" },
     { key: null, label: "Models", width: "" },
-    { key: "status", label: "Status", width: "w-28" },
-    { key: null, label: "Result", width: "w-36" },
-    { key: null, label: "Cost", width: "w-24", align: "right" },
+    { key: "scoreA", label: "Score A", width: "w-24", align: "right" },
+    { key: "scoreB", label: "Score B", width: "w-24", align: "right" },
+    { key: "totalCost", label: "Total Cost", width: "w-32", align: "right" },
     { key: "createdAt", label: "Date", width: "w-40" },
     { key: null, label: "", width: "w-16" },
   ];
+
+  const battlesWithScores = battles.map((battle) => {
+    const difficulty = (challengeMap[battle.challengeId]?.difficulty ??
+      "medium") as Difficulty;
+    const scoreA =
+      battle.status === "completed"
+        ? calculateScore(battle, "A", difficulty)
+        : null;
+    const scoreB =
+      battle.status === "completed"
+        ? calculateScore(battle, "B", difficulty)
+        : null;
+    const totalCost = (battle.modelACost ?? 0) + (battle.modelBCost ?? 0);
+    return { battle, scoreA, scoreB, totalCost, difficulty };
+  });
+
+  const sortedBattles = [...battlesWithScores].sort((a, b) => {
+    let comparison = 0;
+
+    switch (sortField) {
+      case "scoreA":
+        comparison = (a.scoreA ?? -1) - (b.scoreA ?? -1);
+        break;
+      case "scoreB":
+        comparison = (a.scoreB ?? -1) - (b.scoreB ?? -1);
+        break;
+      case "totalCost":
+        comparison = a.totalCost - b.totalCost;
+        break;
+      case "challengeId":
+        comparison = a.battle.challengeId - b.battle.challengeId;
+        break;
+      case "createdAt":
+        comparison =
+          a.battle.createdAt.getTime() - b.battle.createdAt.getTime();
+        break;
+      default:
+        comparison = 0;
+    }
+
+    return sortOrder === "asc" ? comparison : -comparison;
+  });
 
   return (
     <>
       {/* Mobile card view */}
       <div className="space-y-3 md:hidden">
-        {battles.map((battle) => (
+        {sortedBattles.map(({ battle, scoreA, scoreB, totalCost }) => (
           <Link
             key={battle.id}
             href={`/battles/${battle.id}`}
@@ -188,42 +224,44 @@ export function BattlesTable({
               <span className="font-mono text-sm font-bold text-brand-yellow">
                 #{String(battle.challengeId).padStart(2, "0")}
               </span>
-              <BattleStatusBadge status={battle.status} />
+              <span className="text-xs text-muted">
+                {formatDate(battle.createdAt)}
+              </span>
             </div>
             <div className="mb-3 space-y-2">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-muted">A:</span>
-                <span className="flex-1 truncate text-sm font-bold">
-                  {getModelDisplayName(battle.modelA)}
-                </span>
-                {battle.modelASuccess !== null && (
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex min-w-0 items-center gap-2">
+                  <span className="text-xs font-bold text-muted">A:</span>
+                  <span className="truncate text-sm font-bold">
+                    {getModelDisplayName(battle.modelA)}
+                  </span>
+                </div>
+                {scoreA !== null && (
                   <span
-                    className={`text-xs uppercase ${battle.modelASuccess ? "text-green-400" : "text-red-400"}`}
+                    className={`font-mono text-sm font-bold ${getScoreColor(scoreA)}`}
                   >
-                    {battle.modelASuccess ? "solved" : "failed"}
+                    {scoreA.toFixed(1)}
                   </span>
                 )}
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-muted">B:</span>
-                <span className="flex-1 truncate text-sm font-bold">
-                  {getModelDisplayName(battle.modelB)}
-                </span>
-                {battle.modelBSuccess !== null && (
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex min-w-0 items-center gap-2">
+                  <span className="text-xs font-bold text-muted">B:</span>
+                  <span className="truncate text-sm font-bold">
+                    {getModelDisplayName(battle.modelB)}
+                  </span>
+                </div>
+                {scoreB !== null && (
                   <span
-                    className={`text-xs uppercase ${battle.modelBSuccess ? "text-green-400" : "text-red-400"}`}
+                    className={`font-mono text-sm font-bold ${getScoreColor(scoreB)}`}
                   >
-                    {battle.modelBSuccess ? "solved" : "failed"}
+                    {scoreB.toFixed(1)}
                   </span>
                 )}
               </div>
             </div>
             <div className="flex items-center justify-between text-xs text-muted">
-              <BattleResultBadge
-                modelASuccess={battle.modelASuccess}
-                modelBSuccess={battle.modelBSuccess}
-              />
-              <span>{formatDate(battle.createdAt)}</span>
+              <span>Cost: ${totalCost.toFixed(4)}</span>
             </div>
           </Link>
         ))}
@@ -242,7 +280,7 @@ export function BattlesTable({
                       col.key
                         ? "cursor-pointer transition-colors hover:text-brand-beige"
                         : ""
-                    }`}
+                    } ${col.align === "right" ? "text-right" : ""}`}
                     onClick={
                       col.key
                         ? () => handleSort(col.key as SortField)
@@ -261,13 +299,13 @@ export function BattlesTable({
               </tr>
             </thead>
             <tbody>
-              {battles.map((battle) => (
+              {sortedBattles.map(({ battle, scoreA, scoreB, totalCost }) => (
                 <tr
                   key={battle.id}
                   className="border-b border-white/10 transition-colors hover:bg-surface"
                 >
                   <td className="px-4 py-3 font-mono text-sm font-bold text-brand-yellow">
-                    {String(battle.challengeId).padStart(2, "0")}
+                    #{String(battle.challengeId).padStart(2, "0")}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-col gap-1">
@@ -276,42 +314,39 @@ export function BattlesTable({
                         <span className="text-sm font-bold">
                           {getModelDisplayName(battle.modelA)}
                         </span>
-                        {battle.modelASuccess !== null && (
-                          <span
-                            className={`text-xs uppercase ${battle.modelASuccess ? "text-green-400" : "text-red-400"}`}
-                          >
-                            {battle.modelASuccess ? "solved" : "failed"}
-                          </span>
-                        )}
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-bold text-muted">B:</span>
                         <span className="text-sm font-bold">
                           {getModelDisplayName(battle.modelB)}
                         </span>
-                        {battle.modelBSuccess !== null && (
-                          <span
-                            className={`text-xs uppercase ${battle.modelBSuccess ? "text-green-400" : "text-red-400"}`}
-                          >
-                            {battle.modelBSuccess ? "solved" : "failed"}
-                          </span>
-                        )}
                       </div>
                     </div>
                   </td>
-                  <td className="px-4 py-3">
-                    <BattleStatusBadge status={battle.status} />
+                  <td className="px-4 py-3 text-right">
+                    {scoreA !== null ? (
+                      <span
+                        className={`font-mono text-sm font-bold ${getScoreColor(scoreA)}`}
+                      >
+                        {scoreA.toFixed(1)}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-muted">-</span>
+                    )}
                   </td>
-                  <td className="px-4 py-3">
-                    <BattleResultBadge
-                      modelASuccess={battle.modelASuccess}
-                      modelBSuccess={battle.modelBSuccess}
-                    />
+                  <td className="px-4 py-3 text-right">
+                    {scoreB !== null ? (
+                      <span
+                        className={`font-mono text-sm font-bold ${getScoreColor(scoreB)}`}
+                      >
+                        {scoreB.toFixed(1)}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-muted">-</span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-right font-mono text-sm text-muted">
-                    {battle.modelACost || battle.modelBCost
-                      ? `$${((battle.modelACost ?? 0) + (battle.modelBCost ?? 0)).toFixed(4)}`
-                      : "-"}
+                    {totalCost > 0 ? `$${totalCost.toFixed(4)}` : "-"}
                   </td>
                   <td className="px-4 py-3 text-sm text-muted">
                     {formatDate(battle.createdAt)}

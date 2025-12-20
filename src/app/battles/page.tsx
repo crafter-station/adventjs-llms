@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 
 import { db } from "@/db";
-import { battles } from "@/db/schema";
+import { battles, challenges } from "@/db/schema";
 
 import { BattlesFilters } from "./battles-filters";
 import { BattlesPagination } from "./battles-pagination";
@@ -13,9 +13,6 @@ const PAGE_SIZE = 30;
 
 type BattleStats = {
   totalBattles: number;
-  completedBattles: number;
-  pendingBattles: number;
-  failedBattles: number;
   totalCost: number;
   totalExecutions: number;
   totalInputTokens: number;
@@ -25,19 +22,12 @@ type BattleStats = {
 async function getBattleStats(): Promise<BattleStats> {
   const allBattles = await db.select().from(battles);
 
-  let completedBattles = 0;
-  let pendingBattles = 0;
-  let failedBattles = 0;
   let totalCost = 0;
   let totalExecutions = 0;
   let totalInputTokens = 0;
   let totalOutputTokens = 0;
 
   for (const battle of allBattles) {
-    if (battle.status === "completed") completedBattles++;
-    else if (battle.status === "pending") pendingBattles++;
-    else if (battle.status === "failed") failedBattles++;
-
     totalCost += (battle.modelACost ?? 0) + (battle.modelBCost ?? 0);
     totalExecutions +=
       (battle.modelAExecutionCount ?? 0) + (battle.modelBExecutionCount ?? 0);
@@ -49,9 +39,6 @@ async function getBattleStats(): Promise<BattleStats> {
 
   return {
     totalBattles: allBattles.length,
-    completedBattles,
-    pendingBattles,
-    failedBattles,
     totalCost: Math.round(totalCost * 100) / 100,
     totalExecutions,
     totalInputTokens,
@@ -59,7 +46,19 @@ async function getBattleStats(): Promise<BattleStats> {
   };
 }
 
-type SortField = "createdAt" | "challengeId" | "status";
+async function getChallengeMap(): Promise<Map<number, { difficulty: string }>> {
+  const allChallenges = await db.select().from(challenges);
+  return new Map(
+    allChallenges.map((c) => [c.id, { difficulty: c.difficulty }]),
+  );
+}
+
+type SortField =
+  | "createdAt"
+  | "challengeId"
+  | "scoreA"
+  | "scoreB"
+  | "totalCost";
 type SortOrder = "asc" | "desc";
 type Status = "pending" | "completed" | "failed";
 type Result = "a_wins" | "b_wins" | "draw_solved" | "draw_failed";
@@ -139,11 +138,14 @@ async function getBattles(searchParams: SearchParams) {
 
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
-  const sortColumn = {
-    createdAt: battles.createdAt,
-    challengeId: battles.challengeId,
-    status: battles.status,
-  }[sortField];
+  const dbSortableFields = ["createdAt", "challengeId"];
+  const isDbSortable = dbSortableFields.includes(sortField);
+
+  const sortColumn = isDbSortable
+    ? sortField === "createdAt"
+      ? battles.createdAt
+      : battles.challengeId
+    : battles.createdAt;
 
   const orderByClause =
     sortOrder === "asc" ? asc(sortColumn) : desc(sortColumn);
@@ -185,8 +187,15 @@ export default async function BattlesPage({
 }: {
   searchParams: SearchParams;
 }) {
-  const [{ battles: battlesList, pagination, sortField, sortOrder }, stats] =
-    await Promise.all([getBattles(searchParams), getBattleStats()]);
+  const [
+    { battles: battlesList, pagination, sortField, sortOrder },
+    stats,
+    challengeMap,
+  ] = await Promise.all([
+    getBattles(searchParams),
+    getBattleStats(),
+    getChallengeMap(),
+  ]);
 
   return (
     <main className="flex-1 overflow-auto">
@@ -200,37 +209,13 @@ export default async function BattlesPage({
           </p>
         </div>
 
-        <div className="mb-8 grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4 xl:grid-cols-8">
+        <div className="mb-8 grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-5">
           <div className="border border-white/20 bg-surface p-4 pixel-shadow">
             <div className="text-2xl font-bold text-brand-beige">
               {stats.totalBattles}
             </div>
             <div className="text-xs uppercase tracking-wider text-muted">
               Total Battles
-            </div>
-          </div>
-          <div className="border border-white/20 bg-surface p-4 pixel-shadow">
-            <div className="text-2xl font-bold text-green-400">
-              {stats.completedBattles}
-            </div>
-            <div className="text-xs uppercase tracking-wider text-muted">
-              Completed
-            </div>
-          </div>
-          <div className="border border-white/20 bg-surface p-4 pixel-shadow">
-            <div className="text-2xl font-bold text-brand-yellow">
-              {stats.pendingBattles}
-            </div>
-            <div className="text-xs uppercase tracking-wider text-muted">
-              Pending
-            </div>
-          </div>
-          <div className="border border-white/20 bg-surface p-4 pixel-shadow">
-            <div className="text-2xl font-bold text-red-400">
-              {stats.failedBattles}
-            </div>
-            <div className="text-xs uppercase tracking-wider text-muted">
-              Failed
             </div>
           </div>
           <div className="border border-white/20 bg-surface p-4 pixel-shadow">
@@ -286,6 +271,7 @@ export default async function BattlesPage({
             <Suspense fallback={<div className="h-96" />}>
               <BattlesTable
                 battles={battlesList}
+                challengeMap={Object.fromEntries(challengeMap)}
                 sortField={sortField}
                 sortOrder={sortOrder}
               />

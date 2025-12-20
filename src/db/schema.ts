@@ -49,6 +49,8 @@ export const battles = pgTable("battles", {
 
   modelASolution: text("model_a_solution"),
   modelBSolution: text("model_b_solution"),
+  modelASolutionLength: integer("model_a_solution_length"),
+  modelBSolutionLength: integer("model_b_solution_length"),
   modelAError: text("model_a_error"),
   modelBError: text("model_b_error"),
 

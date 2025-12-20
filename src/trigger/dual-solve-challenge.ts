@@ -93,6 +93,8 @@ export const dualSolveChallengeTask = schemaTask({
           modelBCost: output.modelB.cost,
           modelASolution: output.modelA.solution,
           modelBSolution: output.modelB.solution,
+          modelASolutionLength: output.modelA.solutionLength,
+          modelBSolutionLength: output.modelB.solutionLength,
           modelAError: output.modelA.error,
           modelBError: output.modelB.error,
           completedAt: new Date(),

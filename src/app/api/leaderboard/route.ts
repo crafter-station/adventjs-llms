@@ -1,15 +1,22 @@
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
-import { battles } from "@/db/schema";
+import { battles, challenges } from "@/db/schema";
+import {
+  type BattleMetrics,
+  calculateBattleScore,
+  type Difficulty,
+  MIN_BATTLES_FOR_RANKING,
+} from "@/lib/scoring";
 
 type ModelStats = {
   model: string;
   totalBattles: number;
-  wins: number;
-  losses: number;
-  draws: number;
-  winRate: number;
+  avgScore: number;
+  successRate: number;
+  avgTimeToSolution: number;
   avgExecutionCount: number;
+  avgSolutionLength: number;
+  avgCost: number;
 };
 
 export async function GET() {
@@ -18,52 +25,79 @@ export async function GET() {
     .from(battles)
     .where(eq(battles.status, "completed"));
 
+  const allChallenges = await db.select().from(challenges);
+  const challengeMap = new Map(allChallenges.map((c) => [c.id, c]));
+
   const modelStatsMap = new Map<
     string,
     {
       totalBattles: number;
-      wins: number;
-      losses: number;
-      draws: number;
+      totalScore: number;
+      successCount: number;
       totalExecutions: number;
+      totalTimeToSolution: number;
+      totalSolutionLength: number;
+      totalCost: number;
     }
   >();
 
   const initStats = () => ({
     totalBattles: 0,
-    wins: 0,
-    losses: 0,
-    draws: 0,
+    totalScore: 0,
+    successCount: 0,
     totalExecutions: 0,
+    totalTimeToSolution: 0,
+    totalSolutionLength: 0,
+    totalCost: 0,
   });
 
   for (const battle of completedBattles) {
+    const challenge = challengeMap.get(battle.challengeId);
+    const difficulty = (challenge?.difficulty ?? "medium") as Difficulty;
+
     const modelAStats = modelStatsMap.get(battle.modelA) || initStats();
     const modelBStats = modelStatsMap.get(battle.modelB) || initStats();
 
     modelAStats.totalBattles++;
     modelBStats.totalBattles++;
 
-    if (battle.modelAExecutionCount) {
-      modelAStats.totalExecutions += battle.modelAExecutionCount;
+    const metricsA: BattleMetrics = {
+      success: battle.modelASuccess ?? false,
+      timeToSolutionMs: battle.modelATimeToSolution,
+      executionCount: battle.modelAExecutionCount,
+      outputTokens: battle.modelAOutputTokens,
+      solutionLength: battle.modelASolutionLength,
+      cost: battle.modelACost,
+    };
+
+    const metricsB: BattleMetrics = {
+      success: battle.modelBSuccess ?? false,
+      timeToSolutionMs: battle.modelBTimeToSolution,
+      executionCount: battle.modelBExecutionCount,
+      outputTokens: battle.modelBOutputTokens,
+      solutionLength: battle.modelBSolutionLength,
+      cost: battle.modelBCost,
+    };
+
+    modelAStats.totalScore += calculateBattleScore(metricsA, difficulty);
+    modelBStats.totalScore += calculateBattleScore(metricsB, difficulty);
+
+    if (metricsA.success) {
+      modelAStats.successCount++;
+      modelAStats.totalTimeToSolution += metricsA.timeToSolutionMs ?? 0;
+      modelAStats.totalSolutionLength += metricsA.solutionLength ?? 0;
     }
-    if (battle.modelBExecutionCount) {
-      modelBStats.totalExecutions += battle.modelBExecutionCount;
+    if (metricsB.success) {
+      modelBStats.successCount++;
+      modelBStats.totalTimeToSolution += metricsB.timeToSolutionMs ?? 0;
+      modelBStats.totalSolutionLength += metricsB.solutionLength ?? 0;
     }
 
-    const aSuccess = battle.modelASuccess ?? false;
-    const bSuccess = battle.modelBSuccess ?? false;
+    modelAStats.totalExecutions += metricsA.executionCount ?? 0;
+    modelBStats.totalExecutions += metricsB.executionCount ?? 0;
 
-    if (aSuccess && !bSuccess) {
-      modelAStats.wins++;
-      modelBStats.losses++;
-    } else if (!aSuccess && bSuccess) {
-      modelAStats.losses++;
-      modelBStats.wins++;
-    } else {
-      modelAStats.draws++;
-      modelBStats.draws++;
-    }
+    modelAStats.totalCost += metricsA.cost ?? 0;
+    modelBStats.totalCost += metricsB.cost ?? 0;
 
     modelStatsMap.set(battle.modelA, modelAStats);
     modelStatsMap.set(battle.modelB, modelBStats);
@@ -72,27 +106,46 @@ export async function GET() {
   const leaderboard: ModelStats[] = [];
 
   for (const [model, stats] of modelStatsMap) {
+    if (stats.totalBattles < MIN_BATTLES_FOR_RANKING) {
+      continue;
+    }
+
     leaderboard.push({
       model,
       totalBattles: stats.totalBattles,
-      wins: stats.wins,
-      losses: stats.losses,
-      draws: stats.draws,
-      winRate:
+      avgScore:
         stats.totalBattles > 0
-          ? Math.round((stats.wins / stats.totalBattles) * 100)
+          ? Math.round((stats.totalScore / stats.totalBattles) * 100) / 100
+          : 0,
+      successRate:
+        stats.totalBattles > 0
+          ? Math.round((stats.successCount / stats.totalBattles) * 100)
+          : 0,
+      avgTimeToSolution:
+        stats.successCount > 0
+          ? Math.round(stats.totalTimeToSolution / stats.successCount)
           : 0,
       avgExecutionCount:
         stats.totalBattles > 0
           ? Math.round((stats.totalExecutions / stats.totalBattles) * 10) / 10
           : 0,
+      avgSolutionLength:
+        stats.successCount > 0
+          ? Math.round(stats.totalSolutionLength / stats.successCount)
+          : 0,
+      avgCost:
+        stats.totalBattles > 0
+          ? Math.round((stats.totalCost / stats.totalBattles) * 10000) / 10000
+          : 0,
     });
   }
 
   leaderboard.sort((a, b) => {
-    if (b.winRate !== a.winRate) return b.winRate - a.winRate;
-    if (b.wins !== a.wins) return b.wins - a.wins;
-    return b.totalBattles - a.totalBattles;
+    if (b.avgScore !== a.avgScore) return b.avgScore - a.avgScore;
+    if (b.successRate !== a.successRate) return b.successRate - a.successRate;
+    if (b.totalBattles !== a.totalBattles)
+      return b.totalBattles - a.totalBattles;
+    return a.avgCost - b.avgCost;
   });
 
   return Response.json({ leaderboard });

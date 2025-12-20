@@ -113,6 +113,7 @@ export type SolveResult = {
   outputTokens: number;
   cost: number;
   solution?: string;
+  solutionLength?: number;
   error?: string;
 };
 
@@ -208,6 +209,7 @@ async function solveWithStreaming(
     outputTokens,
     cost,
     solution,
+    solutionLength: solution?.length,
   };
 }
 

@@ -20,18 +20,16 @@ const sortConfig: Record<
     defaultDir: "asc",
     format: (v) => v.displayName,
   },
-  winRate: {
-    label: "Win Rate",
+  avgScore: {
+    label: "Score",
     defaultDir: "desc",
-    format: (v) => `${v.winRate}%`,
+    format: (v) => v.avgScore.toFixed(2),
   },
-  wins: { label: "Wins", defaultDir: "desc", format: (v) => String(v.wins) },
-  losses: {
-    label: "Losses",
-    defaultDir: "asc",
-    format: (v) => String(v.losses),
+  successRate: {
+    label: "Success",
+    defaultDir: "desc",
+    format: (v) => `${v.successRate}%`,
   },
-  draws: { label: "Draws", defaultDir: "asc", format: (v) => String(v.draws) },
   totalBattles: {
     label: "Battles",
     defaultDir: "desc",
@@ -50,10 +48,11 @@ const sortConfig: Record<
     defaultDir: "asc",
     format: (v) => String(v.avgExecutionCount),
   },
-  avgOutputTokens: {
-    label: "Avg Tokens",
+  avgSolutionLength: {
+    label: "Avg Chars",
     defaultDir: "asc",
-    format: (v) => v.avgOutputTokens.toLocaleString(),
+    format: (v) =>
+      v.avgSolutionLength > 0 ? String(v.avgSolutionLength) : "-",
   },
   avgCost: {
     label: "Avg Cost",
@@ -113,9 +112,16 @@ function SortIcon({
   );
 }
 
+function getScoreColor(score: number): string {
+  if (score >= 90) return "text-green-400";
+  if (score >= 70) return "text-brand-yellow";
+  if (score >= 50) return "text-brand-beige";
+  return "text-red-400";
+}
+
 export function LeaderboardTable({ data }: { data: ModelStats[] }) {
-  const [sortKey, setSortKey] = useState<SortKey>("avgTimeToSolution");
-  const [sortDir, setSortDir] = useState<SortDirection>("asc");
+  const [sortKey, setSortKey] = useState<SortKey>("avgScore");
+  const [sortDir, setSortDir] = useState<SortDirection>("desc");
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -147,10 +153,10 @@ export function LeaderboardTable({ data }: { data: ModelStats[] }) {
     width?: string;
   }[] = [
     { key: "displayName", align: "left" },
-    { key: "winRate", align: "right", width: "w-20" },
+    { key: "avgScore", align: "right", width: "w-20" },
     { key: "avgTimeToSolution", align: "right", width: "w-24" },
     { key: "avgExecutionCount", align: "right", width: "w-20" },
-    { key: "avgOutputTokens", align: "right", width: "w-24" },
+    { key: "avgSolutionLength", align: "right", width: "w-24" },
     { key: "avgCost", align: "right", width: "w-24" },
     { key: "totalBattles", align: "right", width: "w-20" },
   ];
@@ -185,31 +191,13 @@ export function LeaderboardTable({ data }: { data: ModelStats[] }) {
                 </div>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3 text-sm">
+            <div className="grid grid-cols-3 gap-3 text-sm">
               <div>
-                <span className="text-xs uppercase text-muted">Win Rate</span>
+                <span className="text-xs uppercase text-muted">Score</span>
                 <div
-                  className={`font-mono font-bold ${
-                    stats.winRate >= 70
-                      ? "text-green-400"
-                      : stats.winRate >= 50
-                        ? "text-brand-beige"
-                        : stats.winRate >= 30
-                          ? "text-brand-yellow"
-                          : "text-red-400"
-                  }`}
+                  className={`font-mono font-bold ${getScoreColor(stats.avgScore)}`}
                 >
-                  {stats.winRate}%
-                </div>
-              </div>
-              <div>
-                <span className="text-xs uppercase text-muted">W/L/D</span>
-                <div className="font-bold">
-                  <span className="text-green-400">{stats.wins}</span>
-                  <span className="text-muted">/</span>
-                  <span className="text-red-400">{stats.losses}</span>
-                  <span className="text-muted">/</span>
-                  <span>{stats.draws}</span>
+                  {stats.avgScore.toFixed(2)}
                 </div>
               </div>
               <div>
@@ -231,7 +219,7 @@ export function LeaderboardTable({ data }: { data: ModelStats[] }) {
 
       {/* Desktop table view */}
       <div className="hidden overflow-x-auto border border-white/20 pixel-shadow md:block">
-        <table className="w-full min-w-[700px]">
+        <table className="w-full min-w-[800px]">
           <thead>
             <tr className="border-b border-white/20 bg-surface text-left text-xs font-bold uppercase tracking-wider text-brand-beige/60">
               <th className="w-12 px-4 py-3 text-center">#</th>
@@ -276,25 +264,10 @@ export function LeaderboardTable({ data }: { data: ModelStats[] }) {
                 </td>
                 <td className="px-4 py-3 text-right">
                   <span
-                    className={`font-mono text-sm font-bold ${
-                      stats.winRate >= 70
-                        ? "text-green-400"
-                        : stats.winRate >= 50
-                          ? "text-brand-beige"
-                          : stats.winRate >= 30
-                            ? "text-brand-yellow"
-                            : "text-red-400"
-                    }`}
+                    className={`font-mono text-sm font-bold ${getScoreColor(stats.avgScore)}`}
                   >
-                    {stats.winRate}%
+                    {stats.avgScore.toFixed(2)}
                   </span>
-                  <div className="text-xs text-muted">
-                    <span className="text-green-400">{stats.wins}</span>
-                    <span className="text-muted">/</span>
-                    <span className="text-red-400">{stats.losses}</span>
-                    <span className="text-muted">/</span>
-                    <span>{stats.draws}</span>
-                  </div>
                 </td>
                 <td className="px-4 py-3 text-right font-mono text-sm">
                   {stats.avgTimeToSolution > 0 ? (
@@ -317,7 +290,7 @@ export function LeaderboardTable({ data }: { data: ModelStats[] }) {
                   {stats.avgExecutionCount}
                 </td>
                 <td className="px-4 py-3 text-right font-mono text-sm text-muted">
-                  {stats.avgOutputTokens.toLocaleString()}
+                  {stats.avgSolutionLength > 0 ? stats.avgSolutionLength : "-"}
                 </td>
                 <td className="px-4 py-3 text-right font-mono text-sm text-muted">
                   ${stats.avgCost.toFixed(4)}

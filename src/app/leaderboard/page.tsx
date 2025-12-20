@@ -1,21 +1,25 @@
 import { eq } from "drizzle-orm";
 import Link from "next/link";
 import { db } from "@/db";
-import { battles } from "@/db/schema";
+import { battles, challenges } from "@/db/schema";
 import { MODELS } from "@/lib/models";
+import {
+  type BattleMetrics,
+  calculateBattleScore,
+  type Difficulty,
+  MIN_BATTLES_FOR_RANKING,
+} from "@/lib/scoring";
 import { LeaderboardTable } from "./leaderboard-table";
 
 export type ModelStats = {
   model: string;
   displayName: string;
   totalBattles: number;
-  wins: number;
-  losses: number;
-  draws: number;
-  winRate: number;
+  avgScore: number;
+  successRate: number;
   avgTimeToSolution: number;
   avgExecutionCount: number;
-  avgOutputTokens: number;
+  avgSolutionLength: number;
   avgCost: number;
   totalCost: number;
 };
@@ -31,109 +35,79 @@ async function getLeaderboard(): Promise<ModelStats[]> {
     .from(battles)
     .where(eq(battles.status, "completed"));
 
+  const allChallenges = await db.select().from(challenges);
+  const challengeMap = new Map(allChallenges.map((c) => [c.id, c]));
+
   const modelStatsMap = new Map<
     string,
     {
       totalBattles: number;
-      wins: number;
-      losses: number;
-      draws: number;
+      totalScore: number;
+      successCount: number;
       totalExecutions: number;
       totalTimeToSolution: number;
-      totalOutputTokens: number;
+      totalSolutionLength: number;
       totalCost: number;
-      successCount: number;
     }
   >();
 
   const initStats = () => ({
     totalBattles: 0,
-    wins: 0,
-    losses: 0,
-    draws: 0,
+    totalScore: 0,
+    successCount: 0,
     totalExecutions: 0,
     totalTimeToSolution: 0,
-    totalOutputTokens: 0,
+    totalSolutionLength: 0,
     totalCost: 0,
-    successCount: 0,
   });
 
   for (const battle of completedBattles) {
+    const challenge = challengeMap.get(battle.challengeId);
+    const difficulty = (challenge?.difficulty ?? "medium") as Difficulty;
+
     const modelAStats = modelStatsMap.get(battle.modelA) || initStats();
     const modelBStats = modelStatsMap.get(battle.modelB) || initStats();
 
     modelAStats.totalBattles++;
     modelBStats.totalBattles++;
 
-    if (battle.modelAExecutionCount) {
-      modelAStats.totalExecutions += battle.modelAExecutionCount;
+    const metricsA: BattleMetrics = {
+      success: battle.modelASuccess ?? false,
+      timeToSolutionMs: battle.modelATimeToSolution,
+      executionCount: battle.modelAExecutionCount,
+      outputTokens: battle.modelAOutputTokens,
+      solutionLength: battle.modelASolutionLength,
+      cost: battle.modelACost,
+    };
+
+    const metricsB: BattleMetrics = {
+      success: battle.modelBSuccess ?? false,
+      timeToSolutionMs: battle.modelBTimeToSolution,
+      executionCount: battle.modelBExecutionCount,
+      outputTokens: battle.modelBOutputTokens,
+      solutionLength: battle.modelBSolutionLength,
+      cost: battle.modelBCost,
+    };
+
+    modelAStats.totalScore += calculateBattleScore(metricsA, difficulty);
+    modelBStats.totalScore += calculateBattleScore(metricsB, difficulty);
+
+    if (metricsA.success) {
+      modelAStats.successCount++;
+      modelAStats.totalTimeToSolution += metricsA.timeToSolutionMs ?? 0;
+      modelAStats.totalSolutionLength += metricsA.solutionLength ?? 0;
     }
-    if (battle.modelBExecutionCount) {
-      modelBStats.totalExecutions += battle.modelBExecutionCount;
+    if (metricsB.success) {
+      modelBStats.successCount++;
+      modelBStats.totalTimeToSolution += metricsB.timeToSolutionMs ?? 0;
+      modelBStats.totalSolutionLength += metricsB.solutionLength ?? 0;
     }
 
-    if (battle.modelATimeToSolution) {
-      modelAStats.totalTimeToSolution += battle.modelATimeToSolution;
-    }
-    if (battle.modelBTimeToSolution) {
-      modelBStats.totalTimeToSolution += battle.modelBTimeToSolution;
-    }
+    modelAStats.totalExecutions += metricsA.executionCount ?? 0;
+    modelBStats.totalExecutions += metricsB.executionCount ?? 0;
 
-    if (battle.modelAOutputTokens) {
-      modelAStats.totalOutputTokens += battle.modelAOutputTokens;
-    }
-    if (battle.modelBOutputTokens) {
-      modelBStats.totalOutputTokens += battle.modelBOutputTokens;
-    }
-
-    if (battle.modelACost) {
-      modelAStats.totalCost += battle.modelACost;
-    }
-    if (battle.modelBCost) {
-      modelBStats.totalCost += battle.modelBCost;
-    }
-
-    const aSuccess = battle.modelASuccess ?? false;
-    const bSuccess = battle.modelBSuccess ?? false;
-
-    if (aSuccess) modelAStats.successCount++;
-    if (bSuccess) modelBStats.successCount++;
-
-    if (aSuccess && bSuccess) {
-      const aTime = battle.modelATimeToSolution ?? Number.POSITIVE_INFINITY;
-      const bTime = battle.modelBTimeToSolution ?? Number.POSITIVE_INFINITY;
-
-      if (aTime < bTime) {
-        modelAStats.wins++;
-        modelBStats.losses++;
-      } else if (bTime < aTime) {
-        modelBStats.wins++;
-        modelAStats.losses++;
-      } else {
-        const aExec = battle.modelAExecutionCount ?? Number.POSITIVE_INFINITY;
-        const bExec = battle.modelBExecutionCount ?? Number.POSITIVE_INFINITY;
-
-        if (aExec < bExec) {
-          modelAStats.wins++;
-          modelBStats.losses++;
-        } else if (bExec < aExec) {
-          modelBStats.wins++;
-          modelAStats.losses++;
-        } else {
-          modelAStats.draws++;
-          modelBStats.draws++;
-        }
-      }
-    } else if (aSuccess && !bSuccess) {
-      modelAStats.wins++;
-      modelBStats.losses++;
-    } else if (!aSuccess && bSuccess) {
-      modelAStats.losses++;
-      modelBStats.wins++;
-    } else {
-      modelAStats.draws++;
-      modelBStats.draws++;
-    }
+    modelAStats.totalCost += metricsA.cost ?? 0;
+    modelBStats.totalCost += metricsB.cost ?? 0;
 
     modelStatsMap.set(battle.modelA, modelAStats);
     modelStatsMap.set(battle.modelB, modelBStats);
@@ -142,16 +116,21 @@ async function getLeaderboard(): Promise<ModelStats[]> {
   const leaderboard: ModelStats[] = [];
 
   for (const [model, stats] of modelStatsMap) {
+    if (stats.totalBattles < MIN_BATTLES_FOR_RANKING) {
+      continue;
+    }
+
     leaderboard.push({
       model,
       displayName: getModelDisplayName(model),
       totalBattles: stats.totalBattles,
-      wins: stats.wins,
-      losses: stats.losses,
-      draws: stats.draws,
-      winRate:
+      avgScore:
         stats.totalBattles > 0
-          ? Math.round((stats.wins / stats.totalBattles) * 100)
+          ? Math.round((stats.totalScore / stats.totalBattles) * 100) / 100
+          : 0,
+      successRate:
+        stats.totalBattles > 0
+          ? Math.round((stats.successCount / stats.totalBattles) * 100)
           : 0,
       avgTimeToSolution:
         stats.successCount > 0
@@ -161,9 +140,9 @@ async function getLeaderboard(): Promise<ModelStats[]> {
         stats.totalBattles > 0
           ? Math.round((stats.totalExecutions / stats.totalBattles) * 10) / 10
           : 0,
-      avgOutputTokens:
-        stats.totalBattles > 0
-          ? Math.round(stats.totalOutputTokens / stats.totalBattles)
+      avgSolutionLength:
+        stats.successCount > 0
+          ? Math.round(stats.totalSolutionLength / stats.successCount)
           : 0,
       avgCost:
         stats.totalBattles > 0
@@ -174,12 +153,11 @@ async function getLeaderboard(): Promise<ModelStats[]> {
   }
 
   leaderboard.sort((a, b) => {
-    if (b.winRate !== a.winRate) return b.winRate - a.winRate;
-    if (a.avgTimeToSolution !== b.avgTimeToSolution)
-      return a.avgTimeToSolution - b.avgTimeToSolution;
-    if (a.avgExecutionCount !== b.avgExecutionCount)
-      return a.avgExecutionCount - b.avgExecutionCount;
-    return b.wins - a.wins;
+    if (b.avgScore !== a.avgScore) return b.avgScore - a.avgScore;
+    if (b.successRate !== a.successRate) return b.successRate - a.successRate;
+    if (b.totalBattles !== a.totalBattles)
+      return b.totalBattles - a.totalBattles;
+    return a.avgCost - b.avgCost;
   });
 
   return leaderboard;
@@ -205,13 +183,25 @@ export default async function LeaderboardPage() {
             >
               AdventJS 2025
             </a>{" "}
-            battle results. Click column headers to sort.
+            battle performance. Score (
+            <a
+              href="https://github.com/crafter-station/adventjs-llms/blob/main/src/lib/scoring.ts"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-accent hover:underline"
+            >
+              see algorithm
+            </a>
+            ) combines speed, efficiency, cost, and code conciseness. Minimum{" "}
+            {MIN_BATTLES_FOR_RANKING} battles required.
           </p>
         </div>
 
         {leaderboard.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12">
-            <div className="text-muted">No battles completed yet.</div>
+            <div className="text-muted">
+              No models have completed {MIN_BATTLES_FOR_RANKING}+ battles yet.
+            </div>
             <Link
               href="/"
               className="mt-4 border border-white/20 bg-surface px-4 py-2 text-sm uppercase text-accent transition-colors hover:bg-surface-light"
@@ -241,29 +231,13 @@ export default async function LeaderboardPage() {
                       <div className="mb-4 truncate font-mono text-xs text-muted">
                         {leaderboard[1].model}
                       </div>
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-3 gap-4">
                         <div>
                           <div className="text-2xl font-bold text-brand-beige">
-                            {leaderboard[1].winRate}%
+                            {leaderboard[1].avgScore}
                           </div>
                           <div className="text-xs uppercase text-muted">
-                            Win Rate
-                          </div>
-                        </div>
-                        <div>
-                          <div className="text-lg font-bold">
-                            <span className="text-green-400">
-                              {leaderboard[1].wins}
-                            </span>
-                            <span className="text-muted">/</span>
-                            <span className="text-red-400">
-                              {leaderboard[1].losses}
-                            </span>
-                            <span className="text-muted">/</span>
-                            <span>{leaderboard[1].draws}</span>
-                          </div>
-                          <div className="text-xs uppercase text-muted">
-                            W/L/D
+                            Avg Score
                           </div>
                         </div>
                         <div>
@@ -305,29 +279,13 @@ export default async function LeaderboardPage() {
                       <div className="mb-4 truncate font-mono text-xs text-muted">
                         {leaderboard[0].model}
                       </div>
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-3 gap-4">
                         <div>
                           <div className="text-3xl font-bold text-brand-yellow">
-                            {leaderboard[0].winRate}%
+                            {leaderboard[0].avgScore}
                           </div>
                           <div className="text-xs uppercase text-muted">
-                            Win Rate
-                          </div>
-                        </div>
-                        <div>
-                          <div className="text-xl font-bold">
-                            <span className="text-green-400">
-                              {leaderboard[0].wins}
-                            </span>
-                            <span className="text-muted">/</span>
-                            <span className="text-red-400">
-                              {leaderboard[0].losses}
-                            </span>
-                            <span className="text-muted">/</span>
-                            <span>{leaderboard[0].draws}</span>
-                          </div>
-                          <div className="text-xs uppercase text-muted">
-                            W/L/D
+                            Avg Score
                           </div>
                         </div>
                         <div>
@@ -369,29 +327,13 @@ export default async function LeaderboardPage() {
                       <div className="mb-4 truncate font-mono text-xs text-muted">
                         {leaderboard[2].model}
                       </div>
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-3 gap-4">
                         <div>
                           <div className="text-2xl font-bold text-red-400">
-                            {leaderboard[2].winRate}%
+                            {leaderboard[2].avgScore}
                           </div>
                           <div className="text-xs uppercase text-muted">
-                            Win Rate
-                          </div>
-                        </div>
-                        <div>
-                          <div className="text-lg font-bold">
-                            <span className="text-green-400">
-                              {leaderboard[2].wins}
-                            </span>
-                            <span className="text-muted">/</span>
-                            <span className="text-red-400">
-                              {leaderboard[2].losses}
-                            </span>
-                            <span className="text-muted">/</span>
-                            <span>{leaderboard[2].draws}</span>
-                          </div>
-                          <div className="text-xs uppercase text-muted">
-                            W/L/D
+                            Avg Score
                           </div>
                         </div>
                         <div>
