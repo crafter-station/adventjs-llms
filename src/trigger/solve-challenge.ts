@@ -8,6 +8,7 @@ import { db } from "@/db";
 import { challenges } from "@/db/schema";
 import { MODELS } from "@/lib/models";
 import { executeCodeTask } from "./execute-code";
+import { llmQueue } from "./queues";
 
 function calculateCost(
   modelId: string,
@@ -215,6 +216,7 @@ async function solveWithStreaming(
 
 export const solveChallengeTask = schemaTask({
   id: "solve-challenge",
+  queue: llmQueue,
   maxDuration: 300,
   schema: z.object({
     modelId: z.string().describe("The AI model ID in AI Gateway format"),

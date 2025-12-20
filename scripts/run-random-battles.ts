@@ -6,7 +6,9 @@ const TOTAL_BATTLES = Number(process.argv[2]) || 1000;
 const API_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
 const TOOL_USE_MODELS = MODELS.filter(
-  (m) => m.type === "chat" && m.tags?.includes("tool-use"),
+  (m) =>
+    m.type === "chat" &&
+    (m.tags?.includes("tool-use") || m.tags?.includes("tool-calling")),
 );
 
 function getRandomElement<T>(arr: T[]): T {

@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
 import { battles } from "@/db/schema";
+import { battlesQueue } from "./queues";
 import { type SolveResult, solveChallengeTask } from "./solve-challenge";
 
 const defaultResult: SolveResult = {
@@ -17,6 +18,7 @@ const defaultResult: SolveResult = {
 
 export const dualSolveChallengeTask = schemaTask({
   id: "dual-solve-challenge",
+  queue: battlesQueue,
   maxDuration: 300,
   schema: z.object({
     modelA: z.string().describe("The first AI model ID"),

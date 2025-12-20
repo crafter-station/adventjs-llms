@@ -1,8 +1,10 @@
 import { logger, retry, schemaTask } from "@trigger.dev/sdk";
 import { z } from "zod";
+import { executeCodeQueue } from "./queues";
 
 export const executeCodeTask = schemaTask({
   id: "execute-code",
+  queue: executeCodeQueue,
   maxDuration: 90,
   schema: z.object({
     code: z.string().min(1).describe("The JavaScript code to execute"),

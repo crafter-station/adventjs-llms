@@ -13,6 +13,23 @@ type BattleOutput = {
   modelB: SolveResult;
 };
 
+function QueuedState() {
+  return (
+    <div className="flex h-full flex-col items-center justify-center gap-4 p-8">
+      <div className="flex items-center gap-2">
+        <div className="h-3 w-3 animate-pulse rounded-full bg-brand-yellow" />
+        <span className="text-lg font-bold uppercase text-brand-yellow">
+          In Queue
+        </span>
+      </div>
+      <p className="max-w-md text-center text-sm text-muted">
+        Your battle is waiting in the queue. It will start automatically when a
+        slot becomes available.
+      </p>
+    </div>
+  );
+}
+
 function BattleStreams({
   runId,
   accessToken,
@@ -135,6 +152,9 @@ export function BattleRealtime({
     accessToken,
   });
 
+  const isQueued =
+    run?.status === "PENDING_VERSION" || run?.status === "DELAYED";
+  const isWaitingToStart = !run || run?.status === "DEQUEUED";
   const isComplete = run?.status === "COMPLETED";
   const isFailed =
     run?.status === "FAILED" ||
@@ -142,6 +162,10 @@ export function BattleRealtime({
     run?.status === "SYSTEM_FAILURE";
 
   const output = run?.output as BattleOutput | undefined;
+
+  if (isQueued || isWaitingToStart) {
+    return <QueuedState />;
+  }
 
   return (
     <BattleStreams
