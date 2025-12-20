@@ -10,6 +10,10 @@ export const size = {
 export const contentType = "image/png";
 
 export default async function Image() {
+  const fontData = await fetch(
+    new URL("./fonts/DepartureMono/DepartureMono-Regular.otf", import.meta.url),
+  ).then((res) => res.arrayBuffer());
+
   return new ImageResponse(
     <div
       style={{
@@ -21,7 +25,8 @@ export default async function Image() {
         justifyContent: "center",
         backgroundColor: "#841424",
         backgroundImage:
-          "radial-gradient(circle at 25% 25%, rgba(164, 48, 63, 0.4) 0%, transparent 50%), radial-gradient(circle at 75% 75%, rgba(132, 20, 36, 0.3) 0%, transparent 50%)",
+          "radial-gradient(circle at 40% 20%, rgba(164, 48, 63, 0.4) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(90, 26, 34, 0.4) 0%, transparent 50%)",
+        fontFamily: "DepartureMono",
       }}
     >
       <div
@@ -43,7 +48,6 @@ export default async function Image() {
             fontSize: 64,
             fontWeight: "bold",
             color: "#841424",
-            fontFamily: "monospace",
           }}
         >
           A0
@@ -90,7 +94,7 @@ export default async function Image() {
       >
         <div
           style={{
-            fontSize: 20,
+            fontSize: 18,
             color: "#e5e5e5",
             opacity: 0.7,
             letterSpacing: "0.1em",
@@ -113,11 +117,18 @@ export default async function Image() {
           letterSpacing: "0.05em",
         }}
       >
-        crafterstation.com
+        advent0.vercel.app
       </div>
     </div>,
     {
       ...size,
+      fonts: [
+        {
+          name: "DepartureMono",
+          data: fontData,
+          style: "normal",
+        },
+      ],
     },
   );
 }
