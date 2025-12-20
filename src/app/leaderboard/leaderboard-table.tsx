@@ -156,53 +156,40 @@ export function LeaderboardTable({ data }: { data: ModelStats[] }) {
   ];
 
   return (
-    <div className="overflow-x-auto border border-white/20 pixel-shadow">
-      <table className="w-full">
-        <thead>
-          <tr className="border-b border-white/20 bg-surface text-left text-xs font-bold uppercase tracking-wider text-brand-beige/60">
-            <th className="w-12 px-4 py-3 text-center">#</th>
-            {columns.map((col) => (
-              <th
-                key={col.key}
-                className={`cursor-pointer px-4 py-3 transition-colors hover:text-brand-beige ${col.width || ""} ${col.align === "right" ? "text-right" : col.align === "center" ? "text-center" : ""}`}
-                onClick={() => handleSort(col.key)}
+    <>
+      {/* Mobile card view */}
+      <div className="space-y-3 md:hidden">
+        {sorted.map((stats, index) => (
+          <div
+            key={stats.model}
+            className="border border-white/20 bg-surface p-4"
+          >
+            <div className="mb-3 flex items-center gap-3">
+              <span
+                className={`flex h-8 w-8 items-center justify-center font-mono text-sm font-bold ${
+                  index === 0
+                    ? "bg-brand-yellow text-brand-red-dark"
+                    : index === 1
+                      ? "bg-brand-beige text-brand-red-dark"
+                      : index === 2
+                        ? "bg-red-400 text-white"
+                        : "bg-surface-light text-muted"
+                }`}
               >
-                {sortConfig[col.key].label}
-                <SortIcon active={sortKey === col.key} direction={sortDir} />
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {sorted.map((stats, index) => (
-            <tr
-              key={stats.model}
-              className="border-b border-white/10 transition-colors hover:bg-surface"
-            >
-              <td className="px-4 py-3 text-center">
-                <span
-                  className={`inline-flex h-6 w-6 items-center justify-center font-mono text-sm font-bold ${
-                    index === 0
-                      ? "text-brand-yellow"
-                      : index === 1
-                        ? "text-brand-beige"
-                        : index === 2
-                          ? "text-red-400"
-                          : "text-muted"
-                  }`}
-                >
-                  {index + 1}
-                </span>
-              </td>
-              <td className="px-4 py-3">
-                <div className="font-bold">{stats.displayName}</div>
+                {index + 1}
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="truncate font-bold">{stats.displayName}</div>
                 <div className="truncate font-mono text-xs text-muted">
                   {stats.model}
                 </div>
-              </td>
-              <td className="px-4 py-3 text-right">
-                <span
-                  className={`font-mono text-sm font-bold ${
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div>
+                <span className="text-xs uppercase text-muted">Win Rate</span>
+                <div
+                  className={`font-mono font-bold ${
                     stats.winRate >= 70
                       ? "text-green-400"
                       : stats.winRate >= 50
@@ -213,48 +200,136 @@ export function LeaderboardTable({ data }: { data: ModelStats[] }) {
                   }`}
                 >
                   {stats.winRate}%
-                </span>
-                <div className="text-xs text-muted">
+                </div>
+              </div>
+              <div>
+                <span className="text-xs uppercase text-muted">W/L/D</span>
+                <div className="font-bold">
                   <span className="text-green-400">{stats.wins}</span>
                   <span className="text-muted">/</span>
                   <span className="text-red-400">{stats.losses}</span>
                   <span className="text-muted">/</span>
                   <span>{stats.draws}</span>
                 </div>
-              </td>
-              <td className="px-4 py-3 text-right font-mono text-sm">
-                {stats.avgTimeToSolution > 0 ? (
-                  <span
-                    className={
-                      stats.avgTimeToSolution < 30000
-                        ? "text-green-400"
-                        : stats.avgTimeToSolution < 60000
-                          ? "text-brand-yellow"
-                          : "text-red-400"
-                    }
-                  >
-                    {(stats.avgTimeToSolution / 1000).toFixed(1)}s
-                  </span>
-                ) : (
-                  <span className="text-muted">-</span>
-                )}
-              </td>
-              <td className="px-4 py-3 text-right font-mono text-sm text-muted">
-                {stats.avgExecutionCount}
-              </td>
-              <td className="px-4 py-3 text-right font-mono text-sm text-muted">
-                {stats.avgOutputTokens.toLocaleString()}
-              </td>
-              <td className="px-4 py-3 text-right font-mono text-sm text-muted">
-                ${stats.avgCost.toFixed(4)}
-              </td>
-              <td className="px-4 py-3 text-right font-mono text-sm text-muted">
-                {stats.totalBattles}
-              </td>
+              </div>
+              <div>
+                <span className="text-xs uppercase text-muted">Avg Time</span>
+                <div className="font-mono">
+                  {stats.avgTimeToSolution > 0
+                    ? `${(stats.avgTimeToSolution / 1000).toFixed(1)}s`
+                    : "-"}
+                </div>
+              </div>
+              <div>
+                <span className="text-xs uppercase text-muted">Battles</span>
+                <div className="font-mono">{stats.totalBattles}</div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Desktop table view */}
+      <div className="hidden overflow-x-auto border border-white/20 pixel-shadow md:block">
+        <table className="w-full min-w-[700px]">
+          <thead>
+            <tr className="border-b border-white/20 bg-surface text-left text-xs font-bold uppercase tracking-wider text-brand-beige/60">
+              <th className="w-12 px-4 py-3 text-center">#</th>
+              {columns.map((col) => (
+                <th
+                  key={col.key}
+                  className={`cursor-pointer px-4 py-3 transition-colors hover:text-brand-beige ${col.width || ""} ${col.align === "right" ? "text-right" : col.align === "center" ? "text-center" : ""}`}
+                  onClick={() => handleSort(col.key)}
+                >
+                  {sortConfig[col.key].label}
+                  <SortIcon active={sortKey === col.key} direction={sortDir} />
+                </th>
+              ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {sorted.map((stats, index) => (
+              <tr
+                key={stats.model}
+                className="border-b border-white/10 transition-colors hover:bg-surface"
+              >
+                <td className="px-4 py-3 text-center">
+                  <span
+                    className={`inline-flex h-6 w-6 items-center justify-center font-mono text-sm font-bold ${
+                      index === 0
+                        ? "text-brand-yellow"
+                        : index === 1
+                          ? "text-brand-beige"
+                          : index === 2
+                            ? "text-red-400"
+                            : "text-muted"
+                    }`}
+                  >
+                    {index + 1}
+                  </span>
+                </td>
+                <td className="px-4 py-3">
+                  <div className="font-bold">{stats.displayName}</div>
+                  <div className="truncate font-mono text-xs text-muted">
+                    {stats.model}
+                  </div>
+                </td>
+                <td className="px-4 py-3 text-right">
+                  <span
+                    className={`font-mono text-sm font-bold ${
+                      stats.winRate >= 70
+                        ? "text-green-400"
+                        : stats.winRate >= 50
+                          ? "text-brand-beige"
+                          : stats.winRate >= 30
+                            ? "text-brand-yellow"
+                            : "text-red-400"
+                    }`}
+                  >
+                    {stats.winRate}%
+                  </span>
+                  <div className="text-xs text-muted">
+                    <span className="text-green-400">{stats.wins}</span>
+                    <span className="text-muted">/</span>
+                    <span className="text-red-400">{stats.losses}</span>
+                    <span className="text-muted">/</span>
+                    <span>{stats.draws}</span>
+                  </div>
+                </td>
+                <td className="px-4 py-3 text-right font-mono text-sm">
+                  {stats.avgTimeToSolution > 0 ? (
+                    <span
+                      className={
+                        stats.avgTimeToSolution < 30000
+                          ? "text-green-400"
+                          : stats.avgTimeToSolution < 60000
+                            ? "text-brand-yellow"
+                            : "text-red-400"
+                      }
+                    >
+                      {(stats.avgTimeToSolution / 1000).toFixed(1)}s
+                    </span>
+                  ) : (
+                    <span className="text-muted">-</span>
+                  )}
+                </td>
+                <td className="px-4 py-3 text-right font-mono text-sm text-muted">
+                  {stats.avgExecutionCount}
+                </td>
+                <td className="px-4 py-3 text-right font-mono text-sm text-muted">
+                  {stats.avgOutputTokens.toLocaleString()}
+                </td>
+                <td className="px-4 py-3 text-right font-mono text-sm text-muted">
+                  ${stats.avgCost.toFixed(4)}
+                </td>
+                <td className="px-4 py-3 text-right font-mono text-sm text-muted">
+                  {stats.totalBattles}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
   );
 }

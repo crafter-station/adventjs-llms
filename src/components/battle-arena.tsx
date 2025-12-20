@@ -76,12 +76,12 @@ export function BattleArena({ challenges }: BattleArenaProps) {
   return (
     <div className="flex-1 bg-brand-red-dark">
       <section className="border-b border-white/20">
-        <div className="mx-auto max-w-[1600px] px-6 py-8">
+        <div className="mx-auto max-w-[1600px] px-4 py-6 sm:px-6 sm:py-8">
           <h2 className="mb-6 text-sm font-bold uppercase tracking-widest text-brand-beige/60">
             Configure Battle
           </h2>
 
-          <div className="grid gap-6 md:grid-cols-3">
+          <div className="grid grid-cols-2 gap-3 sm:gap-6 md:grid-cols-3">
             <ModelSelector
               id="model-a"
               label="Model A"
@@ -98,7 +98,7 @@ export function BattleArena({ challenges }: BattleArenaProps) {
               disabled={isLoading}
             />
 
-            <div className="flex flex-col gap-2">
+            <div className="col-span-2 flex flex-col gap-2 md:col-span-1">
               <label
                 htmlFor="challenge"
                 className="text-xs font-bold uppercase tracking-wider text-brand-beige/60"
@@ -122,12 +122,12 @@ export function BattleArena({ challenges }: BattleArenaProps) {
             </div>
           </div>
 
-          <div className="mt-6 flex items-center gap-3">
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
             <button
               type="button"
               onClick={startBattle}
               disabled={isLoading || isSameModel}
-              className="border-2 border-black bg-brand-beige px-6 py-2.5 text-sm font-bold uppercase tracking-widest text-brand-red-dark transition-transform hover:scale-105 disabled:cursor-not-allowed disabled:opacity-50"
+              className="border-2 border-black bg-brand-beige px-6 py-3 text-sm font-bold uppercase tracking-widest text-brand-red-dark transition-transform hover:scale-105 disabled:cursor-not-allowed disabled:opacity-50 sm:py-2.5"
             >
               {isLoading ? "Starting..." : "Start Battle"}
             </button>
@@ -135,7 +135,7 @@ export function BattleArena({ challenges }: BattleArenaProps) {
               type="button"
               onClick={selectRandomModels}
               disabled={isLoading}
-              className="border border-white/20 bg-brand-red px-4 py-2.5 text-sm uppercase tracking-wider text-brand-beige transition-colors hover:bg-brand-red-light disabled:cursor-not-allowed disabled:opacity-50"
+              className="border border-white/20 bg-brand-red px-4 py-3 text-sm uppercase tracking-wider text-brand-beige transition-colors hover:bg-brand-red-light disabled:cursor-not-allowed disabled:opacity-50 sm:py-2.5"
             >
               Random Models
             </button>
@@ -153,7 +153,7 @@ export function BattleArena({ challenges }: BattleArenaProps) {
       </section>
 
       <section>
-        <div className="mx-auto max-w-[1600px] px-6 py-8">
+        <div className="mx-auto max-w-[1600px] px-4 py-6 sm:px-6 sm:py-8">
           <div className="mb-6 flex items-center justify-between">
             <h2 className="text-sm font-bold uppercase tracking-widest text-brand-beige/60">
               Available Challenges
@@ -168,7 +168,7 @@ export function BattleArena({ challenges }: BattleArenaProps) {
             </a>
           </div>
 
-          <div className="border border-white/20">
+          <div className="max-h-[400px] overflow-y-auto border border-white/20 sm:max-h-none">
             {challenges.map((challenge, i) => (
               <button
                 key={challenge.id}

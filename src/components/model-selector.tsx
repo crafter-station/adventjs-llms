@@ -375,14 +375,14 @@ export function ModelSelector({
         )}
       </div>
       {selectedModel && (
-        <div className="flex items-center gap-2 text-xs text-brand-beige/60">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-brand-beige/60">
           <PricingIcon
             tier={getPricingTier(
               selectedModel.inputCost,
               selectedModel.outputCost,
             )}
           />
-          <span>
+          <span className="hidden sm:inline">
             ${selectedModel.inputCost || "0"} in / $
             {selectedModel.outputCost || "0"} out
           </span>

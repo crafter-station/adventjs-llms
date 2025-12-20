@@ -175,101 +175,161 @@ export function BattlesTable({
   ];
 
   return (
-    <div className="overflow-hidden border border-white/20 pixel-shadow">
-      <table className="w-full table-fixed">
-        <thead>
-          <tr className="border-b border-white/20 bg-surface text-left text-xs font-bold uppercase tracking-wider text-brand-beige/60">
-            {columns.map((col) => (
-              <th
-                key={col.label || "actions"}
-                className={`px-4 py-3 ${col.width} ${
-                  col.key
-                    ? "cursor-pointer transition-colors hover:text-brand-beige"
-                    : ""
-                }`}
-                onClick={
-                  col.key ? () => handleSort(col.key as SortField) : undefined
-                }
-              >
-                {col.label}
-                {col.key && (
-                  <SortIcon
-                    active={sortField === col.key}
-                    direction={sortOrder}
-                  />
+    <>
+      {/* Mobile card view */}
+      <div className="space-y-3 md:hidden">
+        {battles.map((battle) => (
+          <Link
+            key={battle.id}
+            href={`/battles/${battle.id}`}
+            className="block border border-white/20 bg-surface p-4 transition-colors hover:bg-surface-light"
+          >
+            <div className="mb-3 flex items-center justify-between">
+              <span className="font-mono text-sm font-bold text-brand-yellow">
+                #{String(battle.challengeId).padStart(2, "0")}
+              </span>
+              <BattleStatusBadge status={battle.status} />
+            </div>
+            <div className="mb-3 space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-muted">A:</span>
+                <span className="flex-1 truncate text-sm font-bold">
+                  {getModelDisplayName(battle.modelA)}
+                </span>
+                {battle.modelASuccess !== null && (
+                  <span
+                    className={`text-xs uppercase ${battle.modelASuccess ? "text-green-400" : "text-red-400"}`}
+                  >
+                    {battle.modelASuccess ? "solved" : "failed"}
+                  </span>
                 )}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {battles.map((battle) => (
-            <tr
-              key={battle.id}
-              className="border-b border-white/10 transition-colors hover:bg-surface"
-            >
-              <td className="px-4 py-3 font-mono text-sm font-bold text-brand-yellow">
-                {String(battle.challengeId).padStart(2, "0")}
-              </td>
-              <td className="px-4 py-3">
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-muted">A:</span>
-                    <span className="text-sm font-bold">
-                      {getModelDisplayName(battle.modelA)}
-                    </span>
-                    {battle.modelASuccess !== null && (
-                      <span
-                        className={`text-xs uppercase ${battle.modelASuccess ? "text-green-400" : "text-red-400"}`}
-                      >
-                        {battle.modelASuccess ? "solved" : "failed"}
-                      </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-muted">B:</span>
+                <span className="flex-1 truncate text-sm font-bold">
+                  {getModelDisplayName(battle.modelB)}
+                </span>
+                {battle.modelBSuccess !== null && (
+                  <span
+                    className={`text-xs uppercase ${battle.modelBSuccess ? "text-green-400" : "text-red-400"}`}
+                  >
+                    {battle.modelBSuccess ? "solved" : "failed"}
+                  </span>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center justify-between text-xs text-muted">
+              <BattleResultBadge
+                modelASuccess={battle.modelASuccess}
+                modelBSuccess={battle.modelBSuccess}
+              />
+              <span>{formatDate(battle.createdAt)}</span>
+            </div>
+          </Link>
+        ))}
+      </div>
+
+      {/* Desktop table view */}
+      <div className="hidden overflow-hidden border border-white/20 pixel-shadow md:block">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[700px]">
+            <thead>
+              <tr className="border-b border-white/20 bg-surface text-left text-xs font-bold uppercase tracking-wider text-brand-beige/60">
+                {columns.map((col) => (
+                  <th
+                    key={col.label || "actions"}
+                    className={`px-4 py-3 ${col.width} ${
+                      col.key
+                        ? "cursor-pointer transition-colors hover:text-brand-beige"
+                        : ""
+                    }`}
+                    onClick={
+                      col.key
+                        ? () => handleSort(col.key as SortField)
+                        : undefined
+                    }
+                  >
+                    {col.label}
+                    {col.key && (
+                      <SortIcon
+                        active={sortField === col.key}
+                        direction={sortOrder}
+                      />
                     )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-muted">B:</span>
-                    <span className="text-sm font-bold">
-                      {getModelDisplayName(battle.modelB)}
-                    </span>
-                    {battle.modelBSuccess !== null && (
-                      <span
-                        className={`text-xs uppercase ${battle.modelBSuccess ? "text-green-400" : "text-red-400"}`}
-                      >
-                        {battle.modelBSuccess ? "solved" : "failed"}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </td>
-              <td className="px-4 py-3">
-                <BattleStatusBadge status={battle.status} />
-              </td>
-              <td className="px-4 py-3">
-                <BattleResultBadge
-                  modelASuccess={battle.modelASuccess}
-                  modelBSuccess={battle.modelBSuccess}
-                />
-              </td>
-              <td className="px-4 py-3 text-right font-mono text-sm text-muted">
-                {battle.modelACost || battle.modelBCost
-                  ? `$${((battle.modelACost ?? 0) + (battle.modelBCost ?? 0)).toFixed(4)}`
-                  : "-"}
-              </td>
-              <td className="px-4 py-3 text-sm text-muted">
-                {formatDate(battle.createdAt)}
-              </td>
-              <td className="px-4 py-3">
-                <Link
-                  href={`/battles/${battle.id}`}
-                  className="text-sm uppercase text-accent transition-colors hover:text-brand-beige"
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {battles.map((battle) => (
+                <tr
+                  key={battle.id}
+                  className="border-b border-white/10 transition-colors hover:bg-surface"
                 >
-                  View
-                </Link>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+                  <td className="px-4 py-3 font-mono text-sm font-bold text-brand-yellow">
+                    {String(battle.challengeId).padStart(2, "0")}
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-muted">A:</span>
+                        <span className="text-sm font-bold">
+                          {getModelDisplayName(battle.modelA)}
+                        </span>
+                        {battle.modelASuccess !== null && (
+                          <span
+                            className={`text-xs uppercase ${battle.modelASuccess ? "text-green-400" : "text-red-400"}`}
+                          >
+                            {battle.modelASuccess ? "solved" : "failed"}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-muted">B:</span>
+                        <span className="text-sm font-bold">
+                          {getModelDisplayName(battle.modelB)}
+                        </span>
+                        {battle.modelBSuccess !== null && (
+                          <span
+                            className={`text-xs uppercase ${battle.modelBSuccess ? "text-green-400" : "text-red-400"}`}
+                          >
+                            {battle.modelBSuccess ? "solved" : "failed"}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <BattleStatusBadge status={battle.status} />
+                  </td>
+                  <td className="px-4 py-3">
+                    <BattleResultBadge
+                      modelASuccess={battle.modelASuccess}
+                      modelBSuccess={battle.modelBSuccess}
+                    />
+                  </td>
+                  <td className="px-4 py-3 text-right font-mono text-sm text-muted">
+                    {battle.modelACost || battle.modelBCost
+                      ? `$${((battle.modelACost ?? 0) + (battle.modelBCost ?? 0)).toFixed(4)}`
+                      : "-"}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-muted">
+                    {formatDate(battle.createdAt)}
+                  </td>
+                  <td className="px-4 py-3">
+                    <Link
+                      href={`/battles/${battle.id}`}
+                      className="text-sm uppercase text-accent transition-colors hover:text-brand-beige"
+                    >
+                      View
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </>
   );
 }
