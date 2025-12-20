@@ -5,6 +5,12 @@ import { BattleArena } from "@/components/battle-arena";
 import { db } from "@/db";
 import { battles, challenges } from "@/db/schema";
 import { MODELS } from "@/lib/models";
+import {
+  type BattleMetrics,
+  calculateBattleScore,
+  type Difficulty,
+  MIN_BATTLES_FOR_RANKING,
+} from "@/lib/scoring";
 
 async function getChallenges() {
   const allChallenges = await db
@@ -53,49 +59,67 @@ async function getTopModels() {
     .from(battles)
     .where(eq(battles.status, "completed"));
 
+  const allChallenges = await db.select().from(challenges);
+  const challengeMap = new Map(allChallenges.map((c) => [c.id, c]));
+
   const modelStats = new Map<
     string,
-    { wins: number; battles: number; totalTime: number; successCount: number }
+    {
+      totalScore: number;
+      totalBattles: number;
+      totalTime: number;
+      successCount: number;
+    }
   >();
 
   for (const battle of completedBattles) {
+    const challenge = challengeMap.get(battle.challengeId);
+    const difficulty = (challenge?.difficulty ?? "medium") as Difficulty;
+
     const aStats = modelStats.get(battle.modelA) || {
-      wins: 0,
-      battles: 0,
+      totalScore: 0,
+      totalBattles: 0,
       totalTime: 0,
       successCount: 0,
     };
     const bStats = modelStats.get(battle.modelB) || {
-      wins: 0,
-      battles: 0,
+      totalScore: 0,
+      totalBattles: 0,
       totalTime: 0,
       successCount: 0,
     };
 
-    aStats.battles++;
-    bStats.battles++;
+    aStats.totalBattles++;
+    bStats.totalBattles++;
 
-    const aSuccess = battle.modelASuccess ?? false;
-    const bSuccess = battle.modelBSuccess ?? false;
+    const metricsA: BattleMetrics = {
+      success: battle.modelASuccess ?? false,
+      timeToSolutionMs: battle.modelATimeToSolution,
+      executionCount: battle.modelAExecutionCount,
+      outputTokens: battle.modelAOutputTokens,
+      solutionLength: battle.modelASolutionLength,
+      cost: battle.modelACost,
+    };
 
-    if (aSuccess) {
+    const metricsB: BattleMetrics = {
+      success: battle.modelBSuccess ?? false,
+      timeToSolutionMs: battle.modelBTimeToSolution,
+      executionCount: battle.modelBExecutionCount,
+      outputTokens: battle.modelBOutputTokens,
+      solutionLength: battle.modelBSolutionLength,
+      cost: battle.modelBCost,
+    };
+
+    aStats.totalScore += calculateBattleScore(metricsA, difficulty);
+    bStats.totalScore += calculateBattleScore(metricsB, difficulty);
+
+    if (metricsA.success) {
       aStats.successCount++;
-      aStats.totalTime += battle.modelATimeToSolution ?? 0;
+      aStats.totalTime += metricsA.timeToSolutionMs ?? 0;
     }
-    if (bSuccess) {
+    if (metricsB.success) {
       bStats.successCount++;
-      bStats.totalTime += battle.modelBTimeToSolution ?? 0;
-    }
-
-    if (aSuccess && bSuccess) {
-      const aTime = battle.modelATimeToSolution ?? Number.POSITIVE_INFINITY;
-      const bTime = battle.modelBTimeToSolution ?? Number.POSITIVE_INFINITY;
-      if (aTime < bTime) aStats.wins++;
-      else if (bTime < aTime) bStats.wins++;
-    } else if (aSuccess) {
-      aStats.wins++;
-    } else if (bSuccess) {
-      bStats.wins++;
+      bStats.totalTime += metricsB.timeToSolutionMs ?? 0;
     }
 
     modelStats.set(battle.modelA, aStats);
@@ -103,19 +127,22 @@ async function getTopModels() {
   }
 
   return Array.from(modelStats.entries())
+    .filter(([, stats]) => stats.totalBattles >= MIN_BATTLES_FOR_RANKING)
     .map(([model, stats]) => ({
       model,
       displayName: getModelDisplayName(model),
-      winRate:
-        stats.battles > 0 ? Math.round((stats.wins / stats.battles) * 100) : 0,
+      avgScore:
+        stats.totalBattles > 0
+          ? Math.round((stats.totalScore / stats.totalBattles) * 100) / 100
+          : 0,
       avgTime:
         stats.successCount > 0
           ? Math.round(stats.totalTime / stats.successCount)
           : 0,
-      battles: stats.battles,
+      battles: stats.totalBattles,
     }))
     .sort((a, b) => {
-      if (b.winRate !== a.winRate) return b.winRate - a.winRate;
+      if (b.avgScore !== a.avgScore) return b.avgScore - a.avgScore;
       return a.avgTime - b.avgTime;
     })
     .slice(0, 5);
@@ -293,7 +320,7 @@ export default async function Home() {
                       {model.displayName}
                     </div>
                     <div className="flex items-center gap-2 text-xs uppercase text-brand-beige/60">
-                      <span className="text-green-400">{model.winRate}%</span>
+                      <span className="text-green-400">{model.avgScore}</span>
                       {model.avgTime > 0 && (
                         <span>{(model.avgTime / 1000).toFixed(1)}s</span>
                       )}

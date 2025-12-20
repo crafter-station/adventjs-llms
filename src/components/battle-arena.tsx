@@ -73,6 +73,11 @@ export function BattleArena({ challenges }: BattleArenaProps) {
     setModelB(shuffled[1].copyString);
   };
 
+  const selectRandomChallenge = () => {
+    const randomIndex = Math.floor(Math.random() * challenges.length);
+    setChallengeId(challenges[randomIndex].id);
+  };
+
   return (
     <div className="flex-1 bg-brand-red-dark">
       <section className="border-b border-white/20">
@@ -138,6 +143,14 @@ export function BattleArena({ challenges }: BattleArenaProps) {
               className="border border-white/20 bg-brand-red px-4 py-3 text-sm uppercase tracking-wider text-brand-beige transition-colors hover:bg-brand-red-light disabled:cursor-not-allowed disabled:opacity-50 sm:py-2.5"
             >
               Random Models
+            </button>
+            <button
+              type="button"
+              onClick={selectRandomChallenge}
+              disabled={isLoading}
+              className="border border-white/20 bg-brand-red px-4 py-3 text-sm uppercase tracking-wider text-brand-beige transition-colors hover:bg-brand-red-light disabled:cursor-not-allowed disabled:opacity-50 sm:py-2.5"
+            >
+              Random Challenge
             </button>
           </div>
 
