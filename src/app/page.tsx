@@ -159,7 +159,7 @@ export default async function Home() {
     <main className="flex min-h-0 flex-1 flex-col overflow-auto">
       <section className="mesh-gradient relative border-b border-white/20">
         {/* AdventJS branding and stickers - right side */}
-        <div className="pointer-events-none absolute right-0 top-0 hidden h-full w-1/3 items-center justify-center lg:flex">
+        <div className="pointer-events-none absolute right-16 top-0 hidden h-full w-1/3 items-center justify-center -translate-y-14 lg:flex xl:right-24">
           <div className="relative flex flex-col items-center">
             {/* AdventJS Logo - prominent */}
             <a
@@ -171,8 +171,8 @@ export default async function Home() {
               <Image
                 src="/adventjs/logo.webp"
                 alt="AdventJS"
-                width={280}
-                height={280}
+                width={320}
+                height={320}
                 className="drop-shadow-2xl"
               />
             </a>
@@ -180,44 +180,44 @@ export default async function Home() {
             <Image
               src="/adventjs/1-christmas-tree.webp"
               alt=""
-              width={80}
-              height={80}
-              className="absolute -right-12 -top-8 rotate-12"
+              width={100}
+              height={100}
+              className="absolute -right-16 -top-12 rotate-12"
             />
             <Image
               src="/adventjs/5-bell-with-bow.webp"
               alt=""
-              width={65}
-              height={65}
-              className="absolute -bottom-16 -left-4 -rotate-12"
+              width={80}
+              height={80}
+              className="absolute -bottom-20 -left-8 -rotate-12"
             />
             <Image
               src="/adventjs/3-gift-icon.webp"
               alt=""
-              width={70}
-              height={70}
-              className="absolute -bottom-12 -right-8 rotate-6"
+              width={85}
+              height={85}
+              className="absolute -bottom-16 -right-12 rotate-6"
             />
             <Image
               src="/adventjs/10-snowflake-image.webp"
               alt=""
-              width={55}
-              height={55}
-              className="absolute -left-16 top-8 -rotate-6"
+              width={70}
+              height={70}
+              className="absolute -left-20 top-4 -rotate-6"
             />
             <Image
               src="/adventjs/13-santa-image.webp"
               alt=""
-              width={60}
-              height={60}
-              className="absolute -right-20 top-1/3 rotate-6"
+              width={75}
+              height={75}
+              className="absolute -right-24 top-1/3 rotate-6"
             />
             <Image
               src="/adventjs/15-pixel-art-deer.webp"
               alt=""
-              width={55}
-              height={55}
-              className="absolute -left-20 top-1/2 -rotate-6"
+              width={70}
+              height={70}
+              className="absolute -left-24 top-1/2 -rotate-6"
             />
           </div>
         </div>

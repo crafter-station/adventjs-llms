@@ -72,7 +72,6 @@ export function Navbar() {
             className="flex h-full items-center gap-2 border-l border-white/20 px-6 text-sm uppercase tracking-wider text-brand-beige transition-colors hover:bg-brand-red"
           >
             Ranking
-            <span className="text-lg leading-none">↗</span>
           </Link>
           <a
             href="https://adventjs.dev"
