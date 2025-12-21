@@ -6,7 +6,7 @@ This file provides guidance for AI assistants working with this codebase.
 
 **advent0** is a real-time LLM Battle Arena built by [Crafter Station](https://crafterstation.com). It pits AI models against each other to solve coding challenges from [AdventJS 2025](https://adventjs.dev). Models compete head-to-head, and the app tracks which model solves challenges faster, with fewer iterations, and using fewer tokens.
 
-**Live site**: https://advent0.vercel.app
+**Live site**: https://advent0.crafter.run
 
 Key features:
 - Real-time streaming of AI model responses during battles

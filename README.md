@@ -2,7 +2,7 @@
 
 Real-time LLM Battle Arena on AdventJS challenges. Watch AI models compete head-to-head, think, iterate, and debug live.
 
-**Live**: [advent0.vercel.app](https://advent0.vercel.app)
+**Live**: [advent0.crafter.run](https://advent0.crafter.run)
 
 Built by [Crafter Station](https://crafterstation.com) | Powered by [exec0](https://github.com/crafter-station/exec0)
 

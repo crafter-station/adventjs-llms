@@ -30,11 +30,11 @@ export const metadata: Metadata = {
   ],
   authors: [{ name: "Crafter Station", url: "https://crafterstation.com" }],
   creator: "Crafter Station",
-  metadataBase: new URL("https://advent0.vercel.app"),
+  metadataBase: new URL("https://advent0.crafter.run"),
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "https://advent0.vercel.app",
+    url: "https://advent0.crafter.run",
     siteName: "advent0",
     title: "advent0 - LLM Battle Arena",
     description:
